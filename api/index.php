@@ -203,7 +203,7 @@ try {
                 $m = array_replace($m, ['status' => 'cancelada', 'updatedAt' => time() * 1000, 'cancelledAt' => time() * 1000, 'sequence' => ($m['sequence'] ?? 0) + 1]);
                 set_json($key, $m);
             }
-            $txt = implode("\n", [!empty($m['guestName']) ? "Hola, {$m['guestName']}:" : 'Hola:', '',
+            $txt = implode("\n", [guest_names($m) !== '' ? 'Hola, ' . guest_names($m) . ':' : 'Hola:', '',
                 'Te escribo para avisarte de que la reunión con OdlC prevista para el ' . mb_strtolower(fecha_larga($m['startUtc'])) . ' a las ' . hora_corta($m['startUtc']) . ' h (Madrid) queda cancelada.', '',
                 'Si la habías añadido a tu calendario, puedes actualizarla aquí:', invite_url($m), '', 'Un saludo,', '', ODLC_NOMBRE, ODLC_EMPRESA]);
             send_json(['meeting' => admin_view($m), 'cancelText' => $txt]);

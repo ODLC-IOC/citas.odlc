@@ -190,7 +190,7 @@ function outlook_events(): array {
         $join = $e['onlineMeeting']['joinUrl'] ?? '';
         if (!$join || !empty($e['isCancelled'])) continue;
         $gs = [];
-        foreach ($e['attendees'] ?? [] as $a) { $addr = strtolower($a['emailAddress']['address'] ?? ''); if ($addr && $addr !== admin_email() && count($gs) < MAX_GUESTS) $gs[] = ['name' => mb_substr((string)($a['emailAddress']['name'] ?? ''), 0, 80), 'email' => $addr, 'phone' => '']; }
+        foreach ($e['attendees'] ?? [] as $a) { $addr = strtolower($a['emailAddress']['address'] ?? ''); if ($addr && $addr !== admin_email() && count($gs) < MAX_GUESTS) { $nm = mb_substr((string)($a['emailAddress']['name'] ?? ''), 0, 80); $gs[] = ['name' => str_contains($nm, '@') ? '' : $nm, 'email' => $addr, 'phone' => '']; } }
         $guest = $gs ? ['name' => join_names(array_values(array_filter(array_column($gs, 'name')))), 'address' => $gs[0]['email']] : null;
         $start = strtotime($e['start']['dateTime'] . 'Z') * 1000; $end = strtotime($e['end']['dateTime'] . 'Z') * 1000;
         $mid = $linked[$e['id']] ?? (preg_match(ID_RE, (string)($e['transactionId'] ?? '')) && get_json('m/' . $e['transactionId']) ? $e['transactionId'] : null);

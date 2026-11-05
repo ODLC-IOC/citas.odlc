@@ -5,7 +5,7 @@ import { parseOutlookIcs, teamsFrom } from './ics.js';
 
 const ME = 'Isabel Olivares de la Cerda';
 const NOGUEST = { name: '', email: '', phone: '' };
-const EMPTY = { mode: 'manual', guests: [NOGUEST], team: ME, subject: '', date: '', time: '', duration: '60', teamsUrl: '', description: '', notes: '', sendInvite: false, toOutlook: true, toBookings: true, bkService: '' };
+const EMPTY = { mode: 'manual', guests: [NOGUEST], team: ME, subject: '', date: '', time: '', duration: '60', teamsUrl: '', description: '', notes: '', sendInvite: true, toOutlook: true, toBookings: false, bkService: '' };
 const LABEL = { proxima: 'Próxima', pasada: 'Pasada', cancelada: 'Cancelada' };
 const ORIGEN = { panel: '', reserva: ' · Reserva web', bookings: ' · Bookings', outlook: ' · Outlook' };
 const fmtSize = (b) => (b < 1048576 ? Math.max(1, Math.round(b / 1024)) + ' KB' : (b / 1048576).toFixed(1).replace('.', ',') + ' MB');

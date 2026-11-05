@@ -36,12 +36,19 @@ function clean_str($v, int $max): string {
 }
 
 const MAX_GUESTS = 10;
-function join_names(array $n): string { return count($n) < 2 ? ($n[0] ?? '') : implode(', ', array_slice($n, 0, -1)) . ' y ' . end($n); }
+function join_names(array $n): string {
+    $n = array_values(array_filter($n, fn($x) => $x !== '' && !str_contains((string)$x, '@'))); return count($n) < 2 ? ($n[0] ?? '') : implode(', ', array_slice($n, 0, -1)) . ' y ' . end($n); }
 // Invitados de una reunión (las reuniones antiguas solo tienen los campos sueltos)
 function guests_of(array $m): array {
     if (!empty($m['guests']) && is_array($m['guests'])) return $m['guests'];
     if (($m['guestName'] ?? '') === '' && ($m['guestEmail'] ?? '') === '' && ($m['guestPhone'] ?? '') === '') return [];
     return [['name' => $m['guestName'] ?? '', 'email' => $m['guestEmail'] ?? '', 'phone' => $m['guestPhone'] ?? '']];
+}
+
+// Nombres para mostrar (nunca correos, también en reuniones guardadas antes de este cambio)
+function guest_names(array $m): string {
+    $n = join_names(array_column(guests_of($m), 'name'));
+    return $n !== '' ? $n : (str_contains((string)($m['guestName'] ?? ''), '@') ? '' : (string)($m['guestName'] ?? ''));
 }
 
 function validate_input(array $b, bool $requireTeams, bool $allowPast = false): array {
@@ -53,6 +60,8 @@ function validate_input(array $b, bool $requireTeams, bool $allowPast = false): 
     foreach (array_slice($raw, 0, MAX_GUESTS) as $i => $g) {
         if (!is_array($g)) continue;
         $g = ['name' => clean_str($g['name'] ?? '', 80), 'email' => mb_strtolower(clean_str($g['email'] ?? '', 160)), 'phone' => clean_str($g['phone'] ?? '', 30)];
+        // Un correo escrito en el nombre pasa a su sitio: los correos nunca se muestran en la invitación
+        if (str_contains($g['name'], '@')) { if ($g['email'] === '') $g['email'] = mb_strtolower($g['name']); $g['name'] = ''; }
         if ($g['name'] === '' && $g['email'] === '' && $g['phone'] === '') continue;
         $n = count($guests);
         if ($g['email'] !== '' && !filter_var($g['email'], FILTER_VALIDATE_EMAIL)) $e["guests.$n.email"] = 'El correo no es válido.';
@@ -135,7 +144,7 @@ function calendar_body(array $m): string {
     if (!empty($m['description'])) $l[] = $m['description'];
     if ($l) $l[] = '';
     $l[] = 'Por OdlC: ' . implode(', ', team_of($m));
-    if (!empty($m['guestName'])) $l[] = 'Invitado: ' . $m['guestName'];
+    if (guest_names($m) !== '') $l[] = 'Invitados: ' . guest_names($m);
     $l[] = '';
     $l[] = 'Reunión online por Microsoft Teams.';
     if (!empty($m['teamsUrl'])) $l[] = 'Unirse a la reunión: ' . $m['teamsUrl'];
@@ -218,7 +227,7 @@ function clock_emoji(string $hhmm): string {
     return ($mi >= 15 && $mi < 45 ? $half : $full)[($mi >= 45 ? $h + 1 : $h) % 12];
 }
 function whatsapp_text(array $m, ?string $name = null): string {
-    $h = hora_corta($m['startUtc']); $varios = $name === null && count(guests_of($m)) > 1; $name = $name ?? ($m['guestName'] ?? '');
+    $h = hora_corta($m['startUtc']); $varios = $name === null && count(guests_of($m)) > 1; $name = $name ?? guest_names($m);
     return implode("\n", [
         $name !== '' ? "Hola, $name:" : 'Hola:', '',
         $varios ? 'Os envío la invitación para nuestra reunión con OdlC.' : 'Te envío la invitación para nuestra reunión con OdlC.', '',
@@ -256,7 +265,7 @@ function public_view(array $m): array {
         ? ['kind' => 'link', 'name' => $f['name'], 'url' => $f['url'], 'label' => is_onedrive($f['url']) ? 'OneDrive' : 'Enlace']
         : ['kind' => 'file', 'name' => $f['name'], 'url' => material_url($m, $f), 'label' => FILE_TYPES[$f['type']] ?? 'Archivo', 'size' => size_text((int)$f['size'])], $m['materials'] ?? []);
     return [
-        'id' => $m['id'], 'estado' => $st, 'subject' => $m['subject'], 'guestName' => $m['guestName'] ?? '', 'team' => team_of($m),
+        'id' => $m['id'], 'estado' => $st, 'subject' => $m['subject'], 'guestName' => guest_names($m), 'team' => team_of($m),
         'description' => $m['description'] ?? '', 'duration' => $m['duration'],
         'fecha' => fecha_corta($m['startUtc']), 'dia' => dia_semana($m['startUtc']), 'fechaLarga' => fecha_larga($m['startUtc']),
         'hora' => hora_corta($m['startUtc']), 'horaFin' => hora_corta($m['endUtc']), 'zona' => utc_offset($m['startUtc']),

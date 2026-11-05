@@ -52,7 +52,7 @@ $og = '<title>Invitación a reunión · OdlC</title>
 <meta property="og:description" content="' . esc($m ? dia_semana($m['startUtc']) . ', ' . fecha_corta($m['startUtc']) . ' · ' . hora_corta($m['startUtc']) . ' h (Madrid) · Microsoft Teams' : 'Consulte la invitación, únase por Microsoft Teams y añádala a su calendario.') . '">
 <meta property="og:url" content="' . esc($site . '/r/' . $id) . '">
 <meta property="og:image" content="' . esc($img) . '"><meta property="og:image:secure_url" content="' . esc($img) . '"><meta property="og:image:type" content="' . ($m ? 'image/jpeg' : 'image/png') . '">
-<meta property="og:image:alt" content="OdlC · Invitación a reunión"><meta name="twitter:image" content="' . esc($img) . '">
+<meta property="og:image:width" content="' . ($m ? '1080' : '1200') . '"><meta property="og:image:height" content="' . ($m ? '1080' : '630') . '"><meta property="og:image:alt" content="OdlC · Invitación a reunión"><meta name="twitter:image" content="' . esc($img) . '">
 <meta name="twitter:card" content="summary_large_image">';
 $html = preg_replace('#<title>.*?</title>#s', $og, $html, 1);
 base_headers();

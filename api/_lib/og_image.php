@@ -1,9 +1,9 @@
 <?php
-// Imagen de cada invitación (1200×630) para la vista previa grande de WhatsApp, Outlook, LinkedIn…
+// Imagen de cada invitación (1080×1080) para la vista previa grande de WhatsApp, Outlook, LinkedIn…
 // Estilo «dashboard» como la propia invitación: fecha, hora, zona y duración. Sin nombres ni correos del invitado.
 declare(strict_types=1);
 
-const OG_W = 1200, OG_H = 630;
+const OG_W = 1080, OG_H = 1080; // cuadrada, como la tarjeta de la invitación
 
 function og_rgb($im, string $hex) { return imagecolorallocate($im, hexdec(substr($hex, 1, 2)), hexdec(substr($hex, 3, 2)), hexdec(substr($hex, 5, 2))); }
 function og_font(string $n): string { return __DIR__ . '/img/' . $n . '.ttf'; }
@@ -40,42 +40,42 @@ function og_image_jpg(array $m): string {
     $tile = og_rgb($im, '#F1EFEA'); $ink = og_rgb($im, '#17302A'); $muted = og_rgb($im, '#5F6B66'); $red = og_rgb($im, '#9B3127');
     $P = og_font('poppins-400'); $PM = og_font('poppins-500'); $L = og_font('lora-400');
 
-    imagefilledrectangle($im, 0, 0, OG_W * $S, OG_H * $S, $white);
-    // Columna verde con el logo
-    $lw = 400 * $S;
-    imagefilledrectangle($im, 0, 0, $lw, OG_H * $S, $green);
+    // Tarjeta cuadrada, como la invitación: cabecera verde con el logo y debajo asunto y fichas
+    $W = OG_W * $S; $H = OG_H * $S;
+    imagefilledrectangle($im, 0, 0, $W, $H, $white);
+    $hh = 330 * $S;
+    imagefilledrectangle($im, 0, 0, $W, $hh, $green);
     $logo = imagecreatefrompng(__DIR__ . '/img/logo-claro.png');
-    $w = 280 * $S; $h = (int)round(imagesy($logo) * $w / imagesx($logo));
-    imagecopyresampled($im, $logo, (int)(($lw - $w) / 2), 200 * $S, 0, 0, $w, $h, imagesx($logo), imagesy($logo));
+    $w = 360 * $S; $h = (int)round(imagesy($logo) * $w / imagesx($logo));
+    imagecopyresampled($im, $logo, (int)(($W - $w) / 2), 70 * $S, 0, 0, $w, $h, imagesx($logo), imagesy($logo));
     imagedestroy($logo);
-    $k = 'INVITACIÓN A REUNIÓN'; $ks = 15 * $S; $sp = 4.5 * $S;
-    og_text($im, $ks, $PM, $gold, ($lw - og_width($ks, $PM, $k, $sp)) / 2, 200 * $S + $h + 62 * $S, $k, $sp);
-    imagefilledrectangle($im, (int)($lw / 2 - 32 * $S), 200 * $S + $h + 92 * $S, (int)($lw / 2 + 32 * $S), 200 * $S + $h + 95 * $S, $gold);
-    $site = preg_replace('#^https?://#', '', site_url());
-    og_text($im, 15 * $S, $P, $white, ($lw - og_width(15 * $S, $P, $site)) / 2, (OG_H - 44) * $S, $site);
+    $k = 'INVITACIÓN A REUNIÓN'; $ks = 19 * $S; $sp = 6 * $S;
+    og_text($im, $ks, $PM, $gold, ($W - og_width($ks, $PM, $k, $sp)) / 2, 70 * $S + $h + 62 * $S, $k, $sp);
+    imagefilledrectangle($im, (int)($W / 2 - 60 * $S), $hh - 5 * $S, (int)($W / 2 + 60 * $S), $hh + 1 * $S, $gold);
 
-    // Columna blanca: asunto y fichas
-    $x = 460 * $S; $right = (OG_W - 60) * $S; $cw = $right - $x;
+    $pad = 70 * $S; $cw = $W - 2 * $pad;
+    $center = fn(float $size, string $font, $col, float $y, string $t) => og_text($im, $size, $font, $col, ($W - og_width($size, $font, $t)) / 2, $y, $t);
     $cancel = $v['estado'] === 'cancelada';
-    og_text($im, 18 * $S, $PM, $cancel ? $red : $gold, $x, 92 * $S, $cancel ? 'Reunión cancelada' : 'Reunión con OdlC');
-    $fs = 38 * $S; while ($fs > 28 * $S && og_width($fs, $L, (string)$v['subject']) > $cw) $fs -= $S; // reduce antes de recortar
-    og_text($im, $fs, $L, $ink, $x, 150 * $S, og_fit($fs, $L, (string)$v['subject'], $cw));
-    $team = og_fit(17 * $S, $P, implode(' · ', $v['team']), $cw);
-    og_text($im, 17 * $S, $P, $muted, $x, 190 * $S, $team);
+    $center(22 * $S, $PM, $cancel ? $red : $gold, 400 * $S, $cancel ? 'Reunión cancelada' : 'Reunión con OdlC');
+    $fs = 46 * $S; while ($fs > 30 * $S && og_width($fs, $L, (string)$v['subject']) > $cw) $fs -= $S; // reduce antes de recortar
+    $center($fs, $L, $ink, 468 * $S, og_fit($fs, $L, (string)$v['subject'], $cw));
+    $center(21 * $S, $P, $muted, 516 * $S, og_fit(21 * $S, $P, implode(' · ', $v['team']), $cw));
 
     $tiles = [
         ['FECHA', $v['fecha'], $v['dia']], ['HORA', $v['hora'] . ' h', 'hasta las ' . $v['horaFin']],
         ['ZONA', 'Madrid', $v['zona']], ['DURACIÓN', $v['duration'] . ' min', 'Microsoft Teams'],
     ];
-    $gap = 20 * $S; $tw = (int)(($cw - $gap) / 2); $th = 160 * $S; $top = 232 * $S;
+    $gap = 24 * $S; $tw = (int)(($cw - $gap) / 2); $th = 196 * $S; $top = 566 * $S;
     foreach ($tiles as $i => [$lab, $big, $small]) {
-        $tx = $x + ($i % 2) * ($tw + $gap); $ty = $top + intdiv($i, 2) * ($th + $gap);
-        og_round_rect($im, $tx, $ty, $tx + $tw, $ty + $th, 18 * $S, $tile);
-        imagefilledrectangle($im, $tx, $ty + 14 * $S, $tx + 4 * $S, $ty + $th - 14 * $S, $gold);
-        og_text($im, 13 * $S, $PM, $gold, $tx + 30 * $S, $ty + 44 * $S, $lab, 3 * $S);
-        og_text($im, 31 * $S, $PM, $ink, $tx + 30 * $S, $ty + 94 * $S, og_fit(31 * $S, $PM, $big, $tw - 50 * $S));
-        og_text($im, 17 * $S, $P, $muted, $tx + 30 * $S, $ty + 130 * $S, og_fit(17 * $S, $P, $small, $tw - 50 * $S));
+        $tx = $pad + ($i % 2) * ($tw + $gap); $ty = $top + intdiv($i, 2) * ($th + $gap);
+        og_round_rect($im, $tx, $ty, $tx + $tw, $ty + $th, 22 * $S, $tile);
+        imagefilledrectangle($im, $tx, $ty + 18 * $S, $tx + 5 * $S, $ty + $th - 18 * $S, $gold);
+        og_text($im, 16 * $S, $PM, $gold, $tx + 36 * $S, $ty + 54 * $S, $lab, 4 * $S);
+        og_text($im, 40 * $S, $PM, $ink, $tx + 36 * $S, $ty + 116 * $S, og_fit(40 * $S, $PM, $big, $tw - 60 * $S));
+        og_text($im, 21 * $S, $P, $muted, $tx + 36 * $S, $ty + 160 * $S, og_fit(21 * $S, $P, $small, $tw - 60 * $S));
     }
+    $site = preg_replace('#^https?://#', '', site_url());
+    $center(19 * $S, $P, $muted, ($H / $S - 40) * $S, 'OdlC · ' . $site);
 
     $out = imagecreatetruecolor(OG_W, OG_H);
     imagecopyresampled($out, $im, 0, 0, 0, 0, OG_W, OG_H, OG_W * $S, OG_H * $S);
