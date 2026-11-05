@@ -41,18 +41,23 @@ const ok = (c, m) => { console.log((c ? '✔ ' : '✘ ') + m); if (!c) process.e
   await p.locator('.p-item', { hasText: 'Notaría' }).locator('button', { hasText: 'Crear invitación' }).click(); await p.waitForSelector('text=Invitación lista');
   ok((await p.textContent('.p-result')).includes('enlace añadido a tu evento de Outlook'), 'Crear invitación desde evento de Outlook con un clic');
   // Reunión automática con materiales y asistentes
-  await p.check('input[value=auto]'); await p.fill('#guestName', 'María'); await p.fill('#team', 'Isabel Olivares de la Cerda\nAna Pérez');
+  await p.check('input[value=auto]'); await p.fill('[aria-label="Nombre del invitado 1"]', 'María'); await p.fill('[aria-label="Correo del invitado 1"]', 'maria@cliente.es');
+  await p.click('text=+ Añadir invitado'); await p.fill('[aria-label="Nombre del invitado 2"]', 'Juan'); await p.fill('[aria-label="Correo del invitado 2"]', 'juan@cliente.es');
+  await p.check('text=Enviar también la convocatoria'); await p.fill('#team', 'Isabel Olivares de la Cerda\nAna Pérez');
   await p.fill('#subject', 'Revisión del pacto'); await p.fill('#date', '2026-11-20'); await p.fill('#time', '11:00');
   await p.setInputFiles('#files', S + '/orden.pdf'); await p.fill('.p-linkrow input[type=url]', 'https://odlcsl-my.sharepoint.com/:w:/g/x'); await p.fill('.p-linkrow input:not([type])', 'Borrador del pacto');
   await p.click('form button.p-btn:not(.ghost)'); await p.waitForSelector('text=Invitación creada.'); await p.waitForTimeout(500);
-  const wa = await p.inputValue('#wa'); ok(wa.includes('Hola, María:') && wa.includes('🕚 11:00 h (Madrid)') && wa.includes('/r/'), 'Mensaje de WhatsApp generado');
+  const wa = await p.inputValue('#wa'); ok(wa.includes('Hola, María y Juan:') && wa.includes('🕚 11:00 h (Madrid)') && wa.includes('/r/'), 'Mensaje de WhatsApp generado');
   const url = await p.getAttribute('.p-result a[href*="/r/"]', 'href');
+  { const mm = (await (await p.request.get(B + '/api/reuniones')).json()).meetings.find((x) => x.subject === 'Revisión del pacto');
+    const ev = await (await p.request.get(M + '/v1.0/me/events/' + encodeURIComponent(mm.graphEventId))).json();
+    ok(mm.guests.length === 2 && (ev.attendees || []).map((a) => a.emailAddress.address).join() === 'maria@cliente.es,juan@cliente.es', 'Dos invitados: los dos reciben la convocatoria de Outlook y Teams'); }
   await p.screenshot({ path: S + '/shots/react-panel.png', fullPage: true });
   // Invitación pública en móvil
   const m = await b.newContext({ ...devices['iPhone 13'], acceptDownloads: true }); const q = await m.newPage(); q.on('pageerror', (e) => errs.push(e.message));
   const raw = await (await q.request.get(url)).text(); ok(raw.includes('og:image') && raw.includes('Invitación a reunión · OdlC') && !raw.includes('María'), 'Open Graph en el HTML sin datos privados');
   await q.goto(url); await q.waitForSelector('.r-grid');
-  const t = await q.textContent('main'); ok(['Revisión del pacto', 'Isabel Olivares de la Cerda · Ana Pérez', 'para María', '20 nov 2026', '11:00 h', 'UTC+1', 'Borrador del pacto', 'orden.pdf', 'Unirse a la reunión'].every((s) => t.includes(s)), 'Invitación con datos, asistentes y materiales');
+  const t = await q.textContent('main'); ok(['Revisión del pacto', 'Isabel Olivares de la Cerda · Ana Pérez', 'para María y Juan', '20 nov 2026', '11:00 h', 'UTC+1', 'Borrador del pacto', 'orden.pdf', 'Unirse a la reunión'].every((s) => t.includes(s)), 'Invitación con datos, asistentes y materiales');
   ok(await q.getAttribute('a.t-btn', 'href') === 'https://teams.microsoft.com/l/meetup-join/' + (await (await q.request.get(B + '/api/reuniones')).status() === 401 ? '' : '') || true, 'Botón de Teams');
   await q.screenshot({ path: S + '/shots/react-inv.png', fullPage: true });
   await q.click('text=Añadir al calendario'); await q.waitForSelector('text=¿En qué calendario?'); await q.screenshot({ path: S + '/shots/react-inv-cal.png' });

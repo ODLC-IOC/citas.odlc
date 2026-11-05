@@ -50,7 +50,7 @@ try {
         if ($fields) send_json(['error' => 'Revise los datos.', 'fields' => $fields], 422);
         $start = madrid_to_utc($date, $time); $now = time() * 1000; $id = new_id();
         $m = ['id' => $id, 'uid' => "$id@odlc.es", 'mode' => 'auto', 'source' => 'reserva', 'tz' => ODLC_TZ, 'status' => 'programada', 'sequence' => 0,
-            'createdAt' => $now, 'updatedAt' => $now, 'subject' => $tipo['nombre'] . ' · ' . ($company ?: $name), 'guestName' => $name, 'guestEmail' => $email,
+            'createdAt' => $now, 'updatedAt' => $now, 'subject' => $tipo['nombre'] . ' · ' . ($company ?: $name), 'guests' => [['name' => $name, 'email' => $email, 'phone' => $phone]], 'guestName' => $name, 'guestEmail' => $email,
             'guestPhone' => $phone, 'description' => $notes, 'notes' => $company ? "Empresa: $company" : '', 'team' => [ODLC_NOMBRE],
             'startUtc' => $start, 'endUtc' => $start + $tipo['duracion'] * 60000, 'duration' => (int)$tipo['duracion'], 'materials' => [], 'sendInvite' => true];
         if (!empty($tipo['bookings'])) {
@@ -156,7 +156,7 @@ try {
         $v = validate_input($b, $mode === 'manual');
         if (isset($v['errors'])) send_json(['error' => 'Revisa los campos marcados.', 'fields' => $v['errors']], 422);
         $invite = $mode === 'auto' && !empty($b['sendInvite']);
-        if ($invite && $v['data']['guestEmail'] === '') send_json(['error' => 'Falta el correo del invitado.', 'fields' => ['guestEmail' => 'Escribe el correo para enviar la convocatoria.']], 422);
+        if ($invite && $v['data']['guestEmail'] === '') send_json(['error' => 'Falta el correo de algún invitado.', 'fields' => ['guests.0.email' => 'Escribe al menos un correo para enviar la convocatoria.']], 422);
         $now = time() * 1000; $id = new_id();
         $m = $v['data'] + ['id' => $id, 'uid' => "$id@odlc.es", 'mode' => $mode, 'source' => 'panel', 'tz' => ODLC_TZ, 'status' => 'programada', 'sequence' => 0,
             'createdAt' => $now, 'updatedAt' => $now, 'sendInvite' => $invite, 'materials' => []];

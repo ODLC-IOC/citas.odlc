@@ -4,7 +4,8 @@ import Card, { LOGO_CLARO } from './Card.jsx';
 import { parseOutlookIcs, teamsFrom } from './ics.js';
 
 const ME = 'Isabel Olivares de la Cerda';
-const EMPTY = { mode: 'manual', guestName: '', guestEmail: '', guestPhone: '', team: ME, subject: '', date: '', time: '', duration: '60', teamsUrl: '', description: '', notes: '', sendInvite: false };
+const NOGUEST = { name: '', email: '', phone: '' };
+const EMPTY = { mode: 'manual', guests: [NOGUEST], team: ME, subject: '', date: '', time: '', duration: '60', teamsUrl: '', description: '', notes: '', sendInvite: false };
 const LABEL = { proxima: 'Próxima', pasada: 'Pasada', cancelada: 'Cancelada' };
 const ORIGEN = { panel: '', reserva: ' · Reserva web', bookings: ' · Bookings', outlook: ' · Outlook' };
 const fmtSize = (b) => (b < 1048576 ? Math.max(1, Math.round(b / 1024)) + ' KB' : (b / 1048576).toFixed(1).replace('.', ',') + ' MB');
@@ -62,12 +63,13 @@ function Dashboard({ user, onLogout }) {
     loadList();
   }, []);
   const autoOk = ms && ms.connected;
+  const setGuest = (i, k) => (e) => setForm({ ...form, guests: form.guests.map((g, j) => (j === i ? { ...g, [k]: e.target.value } : g)) });
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
 
   function reset() { setForm(EMPTY); setEditing(null); setFields({}); setFiles([]); setLink({ url: '', name: '' }); if (fileRef.current) fileRef.current.value = ''; }
   function edit(m) {
     setEditing(m); setFields({}); setFiles([]); setFormMsg(['', '']);
-    setForm({ mode: m.mode, guestName: m.guestName || '', guestEmail: m.guestEmail || '', guestPhone: m.guestPhone || '', team: (m.team || [ME]).join('\n'), subject: m.subject,
+    setForm({ mode: m.mode, guests: m.guests && m.guests.length ? m.guests.map((g) => ({ ...NOGUEST, ...g })) : [NOGUEST], team: (m.team || [ME]).join('\n'), subject: m.subject,
       date: m.local.date, time: m.local.time, duration: String(m.duration), teamsUrl: m.teamsUrl || '', description: m.description || '', notes: m.notes || '', sendInvite: !!m.sendInvite });
     formRef.current.scrollIntoView({ behavior: 'smooth' });
   }
@@ -96,9 +98,9 @@ function Dashboard({ user, onLogout }) {
     if (!p.subject.trim()) f.subject = 'Escribe el asunto.';
     if (!p.date) f.date = 'Elige una fecha.';
     if (!p.time) f.time = 'Elige una hora.';
-    if (p.guestEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(p.guestEmail)) f.guestEmail = 'El correo no es válido.';
+    p.guests.forEach((g, i) => { if (g.email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(g.email)) f['guests.' + i + '.email'] = 'El correo no es válido.'; });
     if ((editing ? editing.mode : p.mode) === 'manual' && !teamsFrom(p.teamsUrl)) f.teamsUrl = 'Pega un enlace de Microsoft Teams válido.';
-    if (p.mode === 'auto' && p.sendInvite && !p.guestEmail) f.guestEmail = 'Para enviar la convocatoria, escribe el correo.';
+    if (p.mode === 'auto' && p.sendInvite && !p.guests.some((g) => g.email)) f['guests.0.email'] = 'Para enviar la convocatoria, escribe al menos un correo.';
     if (Object.keys(f).length) { setFields(f); setFormMsg(['Revisa los campos marcados.', 'err']); return; }
     setBusy(true); setFormMsg([p.mode === 'auto' && !editing ? 'Creando el evento en Outlook y la reunión de Teams…' : 'Guardando…', '']);
     try {
@@ -189,17 +191,27 @@ function Dashboard({ user, onLogout }) {
               <input id="ics-file" type="file" accept=".ics,text/calendar" hidden onChange={importIcs} />
               <small>En Outlook: abre la reunión → Archivo → Guardar como → iCalendar (.ics), o arrástrala al escritorio.</small></div>}
             <div className="p-grid" style={{ marginTop: 18 }}>
-              <Field id="guestName" label="Nombre del invitado" help="Aparece en el saludo y en la invitación. Si son varios: «María y Juan»." err={fields.guestName}><input id="guestName" value={form.guestName} onChange={set('guestName')} maxLength={120} /></Field>
+              <div className="p-field full"><label>Invitados</label>
+                <div className="p-guests">
+                  {form.guests.map((g, i) => (
+                    <div className="p-guest" key={i}>
+                      <input aria-label={'Nombre del invitado ' + (i + 1)} placeholder="Nombre" value={g.name} maxLength={80} onChange={setGuest(i, 'name')} />
+                      <input aria-label={'Correo del invitado ' + (i + 1)} type="email" placeholder="Correo" value={g.email} onChange={setGuest(i, 'email')} />
+                      <input aria-label={'Móvil del invitado ' + (i + 1)} type="tel" placeholder="Móvil (+34 600 000 000)" value={g.phone} onChange={setGuest(i, 'phone')} />
+                      {form.guests.length > 1 && <button type="button" className="p-guest-del" aria-label={'Quitar invitado ' + (i + 1)} onClick={() => setForm({ ...form, guests: form.guests.filter((_, j) => j !== i) })}>Quitar</button>}
+                      {(fields['guests.' + i + '.email'] || fields['guests.' + i + '.phone']) && <small className="p-err" style={{ color: '#9B3127' }}>{fields['guests.' + i + '.email'] || fields['guests.' + i + '.phone']}</small>}
+                    </div>))}
+                </div>
+                {form.guests.length < 10 && <button type="button" className="p-btn ghost p-guest-add" onClick={() => setForm({ ...form, guests: [...form.guests, NOGUEST] })}>+ Añadir invitado</button>}
+                <small>Los nombres aparecen en el saludo y en la invitación. Correo y móvil son opcionales y no se muestran en la invitación; con correo, a cada uno le llega la convocatoria de Outlook y Teams.</small></div>
               <Field id="team" label="Asistentes de OdlC" help="Uno por línea. Aparecen en la invitación y en el calendario."><textarea id="team" rows={2} value={form.team} onChange={set('team')} maxLength={400} /></Field>
-              <Field id="guestEmail" label="Correo del invitado" help="Opcional si solo lo envías por WhatsApp. No aparece en la invitación." err={fields.guestEmail}><input id="guestEmail" type="email" value={form.guestEmail} onChange={set('guestEmail')} /></Field>
-              <Field id="guestPhone" label="Móvil del invitado" help="Opcional: abre WhatsApp directamente en su chat." err={fields.guestPhone}><input id="guestPhone" type="tel" placeholder="+34 600 000 000" value={form.guestPhone} onChange={set('guestPhone')} /></Field>
               <Field id="subject" label="Asunto *" err={fields.subject}><input id="subject" value={form.subject} onChange={set('subject')} maxLength={160} /></Field>
               <Field id="date" label="Fecha *" err={fields.date}><input id="date" type="date" value={form.date} onChange={set('date')} /></Field>
               <Field id="time" label="Hora *" err={fields.time}><input id="time" type="time" step="300" value={form.time} onChange={set('time')} /></Field>
               <Field id="duration" label="Duración *" err={fields.duration}><select id="duration" value={form.duration} onChange={set('duration')}>{[15, 30, 45, 60, 90].map((d) => <option key={d} value={d}>{d} minutos</option>)}</select></Field>
               {modeNow === 'manual' && <Field full id="teamsUrl" label="Enlace de Microsoft Teams *" help="Puedes pegar el texto entero de la invitación de Teams: se extrae el enlace solo." err={fields.teamsUrl}>
                 <input id="teamsUrl" type="url" value={form.teamsUrl} placeholder="https://teams.microsoft.com/l/meetup-join/…" onChange={(e) => setForm({ ...form, teamsUrl: teamsFrom(e.target.value) || e.target.value })} /></Field>}
-              {modeNow !== 'manual' && <div className="p-field full"><label><input type="checkbox" checked={form.sendInvite} onChange={set('sendInvite')} style={{ width: 'auto', marginRight: 8 }} />Enviar también la convocatoria de Outlook al correo del invitado</label></div>}
+              {modeNow !== 'manual' && <div className="p-field full"><label><input type="checkbox" checked={form.sendInvite} onChange={set('sendInvite')} style={{ width: 'auto', marginRight: 8 }} />Enviar también la convocatoria de Outlook y Teams al correo de los invitados</label></div>}
               <Field full id="description" label="Descripción para el invitado" help="Aparece en la invitación y en su calendario. No escribas información confidencial."><textarea id="description" value={form.description} onChange={set('description')} maxLength={2000} /></Field>
               <div className="p-field full"><label htmlFor="files">Materiales para la reunión</label>
                 <input id="files" ref={fileRef} type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.txt,.csv" onChange={(e) => setFiles(Array.from(e.target.files))} />

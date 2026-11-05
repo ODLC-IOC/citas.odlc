@@ -39,3 +39,11 @@
 .p-btn.ms{background:#fff;color:#1b1b1b;border:1px solid #8c8c8c;border-radius:4px;gap:12px;padding:12px 18px;font-weight:600;margin-top:8px}
 .p-btn.ms:hover{background:#f3f3f3}
 .ms-btn svg{width:18px;height:18px;flex:0 0 18px}
+
+/* Varios invitados */
+.p-guests { display: grid; gap: 10px; }
+.p-guest { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: center; }
+.p-guest .p-err { grid-column: 1 / -1; }
+.p-guest-del { background: none; border: 0; color: #9B3127; font: inherit; font-size: .85rem; cursor: pointer; padding: 6px 4px; }
+.p-guest-add { margin-top: 10px; align-self: flex-start; }
+@media (max-width: 720px) { .p-guest { grid-template-columns: 1fr; } .p-guest-del { justify-self: start; } }

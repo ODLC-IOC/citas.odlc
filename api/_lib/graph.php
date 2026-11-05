@@ -149,7 +149,11 @@ function event_payload(array $m, bool $invite): array {
         'start' => ['dateTime' => local_iso($m['startUtc']), 'timeZone' => ODLC_TZ],
         'end' => ['dateTime' => local_iso($m['endUtc']), 'timeZone' => ODLC_TZ],
     ];
-    if ($invite && !empty($m['guestEmail'])) $e['attendees'] = [['emailAddress' => ['address' => $m['guestEmail'], 'name' => $m['guestName'] ?: $m['guestEmail']], 'type' => 'required']];
+    if ($invite) {
+        $att = [];
+        foreach (guests_of($m) as $g) if ($g['email'] !== '') $att[] = ['emailAddress' => ['address' => $g['email'], 'name' => $g['name'] ?: $g['email']], 'type' => 'required'];
+        if ($att) $e['attendees'] = $att;
+    }
     return $e;
 }
 function create_teams_event(array $m, bool $invite): array {
@@ -177,14 +181,15 @@ function outlook_events(): array {
     foreach ($d['value'] ?? [] as $e) {
         $join = $e['onlineMeeting']['joinUrl'] ?? '';
         if (!$join || !empty($e['isCancelled'])) continue;
-        $guest = null;
-        foreach ($e['attendees'] ?? [] as $a) { $addr = strtolower($a['emailAddress']['address'] ?? ''); if ($addr && $addr !== admin_email()) { $guest = $a['emailAddress']; break; } }
+        $gs = [];
+        foreach ($e['attendees'] ?? [] as $a) { $addr = strtolower($a['emailAddress']['address'] ?? ''); if ($addr && $addr !== admin_email() && count($gs) < MAX_GUESTS) $gs[] = ['name' => mb_substr((string)($a['emailAddress']['name'] ?? ''), 0, 80), 'email' => $addr, 'phone' => '']; }
+        $guest = $gs ? ['name' => join_names(array_values(array_filter(array_column($gs, 'name')))), 'address' => $gs[0]['email']] : null;
         $start = strtotime($e['start']['dateTime'] . 'Z') * 1000; $end = strtotime($e['end']['dateTime'] . 'Z') * 1000;
         $mid = $linked[$e['id']] ?? (preg_match(ID_RE, (string)($e['transactionId'] ?? '')) && get_json('m/' . $e['transactionId']) ? $e['transactionId'] : null);
         $preview = (string)($e['bodyPreview'] ?? '');
         $out[] = ['eventId' => $e['id'], 'subject' => $e['subject'] ?? '(sin asunto)', 'startUtc' => $start, 'endUtc' => $end,
             'fecha' => fecha_larga($start), 'hora' => hora_corta($start), 'horaFin' => hora_corta($end), 'joinUrl' => $join,
-            'guestName' => $guest['name'] ?? '', 'guestEmail' => strtolower($guest['address'] ?? ''), 'meetingId' => $mid,
+            'guestName' => $guest['name'] ?? '', 'guestEmail' => strtolower($guest['address'] ?? ''), 'guests' => $gs, 'meetingId' => $mid,
             'bookings' => (bool)preg_match('/bookings|bookwithme|reserva/i', $preview . ' ' . implode(' ', $e['categories'] ?? []))];
     }
     return $out;
@@ -195,7 +200,7 @@ function import_outlook_event(array $ev): array {
     $now = time() * 1000; $id = new_id();
     $dur = (int)round(($ev['endUtc'] - $ev['startUtc']) / 60000);
     $m = ['id' => $id, 'uid' => "$id@odlc.es", 'mode' => 'outlook', 'source' => $ev['bookings'] ? 'bookings' : 'outlook', 'tz' => ODLC_TZ, 'status' => 'programada', 'sequence' => 0,
-        'createdAt' => $now, 'updatedAt' => $now, 'subject' => mb_substr($ev['subject'], 0, 160), 'guestName' => mb_substr($ev['guestName'], 0, 120), 'guestEmail' => $ev['guestEmail'],
+        'createdAt' => $now, 'updatedAt' => $now, 'subject' => mb_substr($ev['subject'], 0, 160), 'guestName' => mb_substr($ev['guestName'], 0, 240), 'guestEmail' => $ev['guestEmail'], 'guests' => $ev['guests'] ?? [],
         'guestPhone' => '', 'description' => '', 'notes' => '', 'team' => [ODLC_NOMBRE], 'startUtc' => $ev['startUtc'], 'endUtc' => $ev['endUtc'], 'duration' => $dur,
         'teamsUrl' => $ev['joinUrl'], 'graphEventId' => $ev['eventId'], 'materials' => []];
     set_json("m/$id", $m);

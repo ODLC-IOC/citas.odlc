@@ -35,13 +35,36 @@ function clean_str($v, int $max): string {
     return mb_substr(trim($s), 0, $max);
 }
 
+const MAX_GUESTS = 10;
+function join_names(array $n): string { return count($n) < 2 ? ($n[0] ?? '') : implode(', ', array_slice($n, 0, -1)) . ' y ' . end($n); }
+// Invitados de una reunión (las reuniones antiguas solo tienen los campos sueltos)
+function guests_of(array $m): array {
+    if (!empty($m['guests']) && is_array($m['guests'])) return $m['guests'];
+    if (($m['guestName'] ?? '') === '' && ($m['guestEmail'] ?? '') === '' && ($m['guestPhone'] ?? '') === '') return [];
+    return [['name' => $m['guestName'] ?? '', 'email' => $m['guestEmail'] ?? '', 'phone' => $m['guestPhone'] ?? '']];
+}
+
 function validate_input(array $b, bool $requireTeams, bool $allowPast = false): array {
     $e = [];
     $team = array_values(array_filter(array_map('trim', preg_split('/[\n,;]+/', clean_str($b['team'] ?? '', 400)) ?: [])));
+    // Invitados: lista de { name, email, phone }; se aceptan también los campos sueltos de versiones anteriores
+    $raw = is_array($b['guests'] ?? null) ? $b['guests'] : [['name' => $b['guestName'] ?? '', 'email' => $b['guestEmail'] ?? '', 'phone' => $b['guestPhone'] ?? '']];
+    $guests = [];
+    foreach (array_slice($raw, 0, MAX_GUESTS) as $i => $g) {
+        if (!is_array($g)) continue;
+        $g = ['name' => clean_str($g['name'] ?? '', 80), 'email' => mb_strtolower(clean_str($g['email'] ?? '', 160)), 'phone' => clean_str($g['phone'] ?? '', 30)];
+        if ($g['name'] === '' && $g['email'] === '' && $g['phone'] === '') continue;
+        $n = count($guests);
+        if ($g['email'] !== '' && !filter_var($g['email'], FILTER_VALIDATE_EMAIL)) $e["guests.$n.email"] = 'El correo no es válido.';
+        if ($g['phone'] !== '' && !preg_match('/^\+?\d{9,15}$/', preg_replace('/[^\d+]/', '', $g['phone']))) $e["guests.$n.phone"] = 'Escribe el móvil con prefijo, por ejemplo +34 600 000 000.';
+        $guests[] = $g;
+    }
+    $first = fn(string $k) => array_values(array_filter(array_column($guests, $k)))[0] ?? '';
     $d = [
-        'guestName' => clean_str($b['guestName'] ?? '', 120),
-        'guestEmail' => mb_strtolower(clean_str($b['guestEmail'] ?? '', 160)),
-        'guestPhone' => clean_str($b['guestPhone'] ?? '', 30),
+        'guests' => $guests,
+        'guestName' => mb_substr(join_names(array_values(array_filter(array_column($guests, 'name')))), 0, 240),
+        'guestEmail' => $first('email'),
+        'guestPhone' => $first('phone'),
         'subject' => clean_str($b['subject'] ?? '', 160),
         'date' => clean_str($b['date'] ?? '', 10),
         'time' => clean_str($b['time'] ?? '', 5),
@@ -52,8 +75,6 @@ function validate_input(array $b, bool $requireTeams, bool $allowPast = false): 
         'team' => $team ? array_slice($team, 0, 6) : [ODLC_NOMBRE],
     ];
     if ($d['subject'] === '') $e['subject'] = 'Escribe el asunto de la reunión.';
-    if ($d['guestEmail'] !== '' && !filter_var($d['guestEmail'], FILTER_VALIDATE_EMAIL)) $e['guestEmail'] = 'El correo no es válido.';
-    if ($d['guestPhone'] !== '' && !preg_match('/^\+?\d{9,15}$/', preg_replace('/[^\d+]/', '', $d['guestPhone']))) $e['guestPhone'] = 'Escribe el móvil con prefijo, por ejemplo +34 600 000 000.';
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $d['date'])) $e['date'] = 'Elige una fecha.';
     if (!preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $d['time'])) $e['time'] = 'Elige una hora válida.';
     if (!in_array($d['duration'], DURACIONES, true)) $e['duration'] = 'Elige una duración: 15, 30, 45, 60 o 90 minutos.';
@@ -147,18 +168,18 @@ function clock_emoji(string $hhmm): string {
     $half = ['🕧', '🕜', '🕝', '🕞', '🕟', '🕠', '🕡', '🕢', '🕣', '🕤', '🕥', '🕦'];
     return ($mi >= 15 && $mi < 45 ? $half : $full)[($mi >= 45 ? $h + 1 : $h) % 12];
 }
-function whatsapp_text(array $m): string {
-    $h = hora_corta($m['startUtc']);
+function whatsapp_text(array $m, ?string $name = null): string {
+    $h = hora_corta($m['startUtc']); $name = $name ?? ($m['guestName'] ?? '');
     return implode("\n", [
-        !empty($m['guestName']) ? "Hola, {$m['guestName']}:" : 'Hola:', '',
+        $name !== '' ? "Hola, $name:" : 'Hola:', '',
         'Te envío la invitación para nuestra reunión con OdlC.', '',
         '📅 ' . fecha_larga($m['startUtc']), clock_emoji($h) . " $h h (Madrid)", '💻 Microsoft Teams', '',
         'Puedes consultar la invitación, unirte a la reunión y añadirla a tu calendario aquí:', '',
         invite_url($m), '', 'Un saludo,', '', ODLC_NOMBRE, ODLC_EMPRESA,
     ]);
 }
-function whatsapp_link(array $m, ?string $text = null): string {
-    $p = preg_replace('/\D/', '', (string)($m['guestPhone'] ?? ''));
+function whatsapp_link(array $m, ?string $text = null, ?string $phone = null): string {
+    $p = preg_replace('/\D/', '', (string)($phone ?? $m['guestPhone'] ?? ''));
     if (strlen($p) === 9) $p = '34' . $p;
     return "https://wa.me/$p?text=" . rawurlencode($text ?? whatsapp_text($m));
 }
@@ -196,6 +217,6 @@ function public_view(array $m): array {
 function admin_view(array $m): array {
     return $m + [
         'estado' => estado($m), 'fecha' => fecha_larga($m['startUtc']), 'hora' => hora_corta($m['startUtc']), 'horaFin' => hora_corta($m['endUtc']),
-        'local' => local_parts($m['startUtc']), 'url' => invite_url($m), 'whatsappText' => whatsapp_text($m), 'whatsappLink' => whatsapp_link($m),
+        'local' => local_parts($m['startUtc']), 'url' => invite_url($m), 'whatsappText' => whatsapp_text($m), 'whatsappLink' => whatsapp_link($m), 'guests' => guests_of($m),
     ];
 }
