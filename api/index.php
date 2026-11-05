@@ -151,7 +151,7 @@ try {
 
     // Reuniones
     if ($path === '/reuniones' && $method === 'GET') {
-        $items = list_meetings();
+        $items = array_values(array_filter(list_meetings(), fn($m) => empty($m['archived']))); // las ocultadas no salen (su enlace sigue funcionando)
         usort($items, fn($a, $b) => $a['startUtc'] <=> $b['startUtc']);
         send_json(['meetings' => array_map('admin_view', $items)]);
     }
@@ -185,7 +185,7 @@ try {
         send_json(['meeting' => admin_view($m)], 201);
     }
 
-    if (preg_match('#^/reuniones/([A-Za-z0-9_-]{22})(?:/(cancelar|materiales)(?:/([A-Za-z0-9_-]{16}))?)?$#', $path, $x)) {
+    if (preg_match('#^/reuniones/([A-Za-z0-9_-]{22})(?:/(cancelar|materiales|ocultar)(?:/([A-Za-z0-9_-]{16}))?)?$#', $path, $x)) {
         $key = 'm/' . $x[1]; $m = get_json($key); $sub = $x[2] ?? ''; $fid = $x[3] ?? '';
         if (!$m) send_json(['error' => 'Reunión no encontrada'], 404);
 
@@ -201,6 +201,8 @@ try {
             set_json($key, $next);
             send_json(['meeting' => admin_view($next)]);
         }
+        // Quitar de la lista (p. ej. un duplicado) sin cancelar nada ni avisar a nadie: la invitación y su enlace siguen funcionando
+        if ($sub === 'ocultar' && $method === 'POST') { $m['archived'] = true; set_json($key, $m); send_json(['ok' => true]); }
         if ($sub === 'cancelar' && $method === 'POST') {
             if ($m['status'] !== 'cancelada') {
                 if (!empty($m['graphEventId'])) cancel_teams_event($m);

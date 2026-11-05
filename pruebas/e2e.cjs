@@ -93,6 +93,10 @@ const ok = (c, m) => { console.log((c ? '✔ ' : '✘ ') + m); if (!c) process.e
   { const r = await p.request.post(B + '/api/reuniones', { headers: { 'Content-Type': 'application/json', Origin: B }, data: { mode: 'manual', toBookings: true, guests: [{ name: 'Alex', email: 'alex@cliente.es' }, { name: 'Marc', email: 'marc@cliente.es' }], subject: 'In&Vest', date: '2026-11-26', time: '11:30', duration: 60, teamsUrl: 'https://teams.live.com/meet/1?p=x', team: 'Isabel Olivares de la Cerda' } });
     const a2 = await (await p.request.get(M + '/last-appt')).json(); const mm = (await r.json()).meeting;
     ok(r.status() === 201 && mm.bookingAppointmentId === 'AP1' && a2.customers.length === 2 && a2.isLocationOnline === false && a2.serviceLocation.locationUri.includes('teams.live.com') && !mm.graphEventId, 'Reunión del panel registrada en Bookings con los dos invitados y el enlace pegado'); }
+  { const all0 = (await (await p.request.get(B + '/api/reuniones')).json()).meetings; const dup = all0.find((x) => x.subject === 'In&Vest');
+    const r = await p.request.post(B + '/api/reuniones/' + dup.id + '/ocultar', { headers: { 'Content-Type': 'application/json', Origin: B }, data: {} });
+    const all1 = (await (await p.request.get(B + '/api/reuniones')).json()).meetings; const pg = await p.request.get(B + '/r/' + dup.id);
+    ok(r.ok() && !all1.some((x) => x.id === dup.id) && pg.status() === 200, 'Ocultar un duplicado: sale de la lista y su enlace sigue funcionando'); }
   // Cancelar desde el panel
   await p.reload(); await p.waitForSelector('text=Mis reuniones');
   const item = p.locator('.p-item', { hasText: 'Pedro Ruiz' }); await item.locator('button.danger').click(); await item.locator('button.danger').click(); await p.waitForTimeout(800);

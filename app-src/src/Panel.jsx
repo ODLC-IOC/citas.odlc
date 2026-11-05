@@ -134,6 +134,11 @@ function Dashboard({ user, onLogout }) {
     try { const d = await api('/outlook/importar', { method: 'POST', body: { eventId: ev.eventId } }); show(d.meeting, false); loadList(); loadEvents(); }
     catch (e) { setRowMsg({ [ev.eventId]: e.message }); }
   }
+  async function hide(m) {
+    if (armed !== 'h' + m.id) { setArmed('h' + m.id); setTimeout(() => setArmed(''), 5000); return; }
+    try { await api('/reuniones/' + m.id + '/ocultar', { method: 'POST', body: {} }); loadList(); }
+    catch (e) { setRowMsg({ [m.id]: e.message }); }
+  }
   async function cancel(m) {
     if (armed !== m.id) { setArmed(m.id); setTimeout(() => setArmed(''), 5000); return; }
     try { const d = await api('/reuniones/' + m.id + '/cancelar', { method: 'POST', body: {} }); loadList(); show(d.meeting, false, d.cancelText); }
@@ -214,6 +219,7 @@ function Dashboard({ user, onLogout }) {
                       <button className="p-btn wa" type="button" onClick={() => show(m, false)}>WhatsApp</button>
                       <button className="p-btn ghost" type="button" onClick={() => edit(m)}>Editar</button>
                       <button className="p-btn danger" type="button" onClick={() => cancel(m)}>{armed === m.id ? '¿Seguro? Sí, cancelar' : 'Cancelar'}</button></>}
+                    <button className="p-btn ghost" type="button" title="Quitar de la lista sin cancelar ni avisar a nadie; el enlace sigue funcionando" onClick={() => hide(m)}>{armed === 'h' + m.id ? '¿Ocultar? Sí' : 'Ocultar'}</button>
                   </div>
                   {rowMsg[m.id] && <p className="p-msg">{rowMsg[m.id]}</p>}
                 </article>); })())}
