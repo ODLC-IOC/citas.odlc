@@ -60,8 +60,13 @@ try {
             $m['bookingAppointmentId'] = $ap['appointmentId']; $m['teamsUrl'] = $ap['joinUrl'];
             $linked = get_json('ms/linked') ?? []; $linked['bk:' . $ap['appointmentId']] = $id; set_json('ms/linked', $linked);
         } else {
-            $ev = create_teams_event($m, true); // Outlook envía al cliente la convocatoria oficial con Teams
-            $m['teamsUrl'] = $ev['joinUrl']; $m['graphEventId'] = $ev['eventId'];
+            try { // Outlook envía al cliente la convocatoria oficial con Teams
+                $ev = create_teams_event($m, true); $m['teamsUrl'] = $ev['joinUrl']; $m['graphEventId'] = $ev['eventId'];
+            } catch (GraphError $e) {
+                // Cuenta sin Teams de empresa: convocatoria normal de Outlook con el enlace fijo de Teams de config.php (si lo hay)
+                $m['teamsUrl'] = (string)cfg('teams_url', ''); $m['mode'] = 'manual';
+                $m['graphEventId'] = create_outlook_event($m, true);
+            }
         }
         set_json("m/$id", $m);
         $rl['n']++; set_json($rk, $rl);
