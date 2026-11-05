@@ -30,7 +30,7 @@ export default function Panel() {
   useEffect(() => { api('/session').then((d) => setUser(d.user)).catch(() => setUser(null)); }, []);
   if (user === undefined) return <div className="p-page"><Top label="Reuniones" /></div>;
   if (!user) return <Login />;
-  return <Dashboard user={user} onLogout={() => api('/logout', { method: 'POST', body: {} }).finally(() => { history.replaceState(null, '', '/panel'); setUser(null); })} />;
+  return <Dashboard user={user} onLogout={() => api('/logout', { method: 'POST', body: {} }).finally(() => { history.replaceState(null, '', '/'); setUser(null); })} />;
 }
 
 function Dashboard({ user, onLogout }) {
@@ -57,7 +57,7 @@ function Dashboard({ user, onLogout }) {
   const loadList = () => api('/reuniones').then((d) => setMeetings(d.meetings)).catch(() => {});
   const loadEvents = () => api('/outlook/eventos').then((d) => { setEvents(d.events); if (d.importadas) loadList(); }).catch((e) => setEvents({ error: e.message }));
   useEffect(() => {
-    if (qs.get('ms') || qs.get('acceso')) history.replaceState(null, '', '/panel');
+    if (qs.get('ms') || qs.get('acceso')) history.replaceState(null, '', '/');
     api('/ms/estado').then((s) => { setMs(s); if (s.connected && s.teams) loadEvents(); }).catch(() => setMs({ error: true }));
     loadList();
   }, []);
@@ -156,7 +156,7 @@ function Dashboard({ user, onLogout }) {
           <div className="p-actions" style={{ margin: 0 }}>
             {user.admin && ms && ms.configured && !ms.connected && <a className="p-btn ghost" href="/api/ms/conectar">Conectar con Microsoft 365</a>}
             {user.admin && ms && ms.connected && <button className="p-btn ghost" type="button" onClick={() => api('/ms/desconectar', { method: 'POST', body: {} }).then(() => location.reload())}>Desconectar</button>}
-            <a className="p-btn ghost" href="/" target="_blank" rel="noopener">Ver página de reservas</a>
+            <a className="p-btn ghost" href="/reservar" target="_blank" rel="noopener">Ver página de reservas</a>
           </div></div></section>
 
         {autoOk && user.admin && <BookingsBox />}

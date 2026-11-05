@@ -30,7 +30,7 @@ const ok = (c, m) => { console.log((c ? '✔ ' : '✘ ') + m); if (!c) process.e
   // Conectar Microsoft (simulado): /api/ms/conectar redirige a Microsoft con state + PKCE
   const r = await p.request.get(B + '/api/ms/conectar', { maxRedirects: 0 });
   const loc = new URL(r.headers()['location']); ok(loc.searchParams.get('code_challenge_method') === 'S256' && loc.searchParams.get('scope') === 'openid offline_access User.Read Calendars.ReadWrite BookingsAppointment.ReadWrite.All', 'Autorización OAuth con PKCE y permisos mínimos');
-  await p.goto(B + '/api/ms/callback?code=C&state=' + loc.searchParams.get('state')); await p.waitForURL('**/panel**'); await p.waitForSelector('text=Citas de Outlook y Bookings');
+  await p.goto(B + '/api/ms/callback?code=C&state=' + loc.searchParams.get('state')); await p.waitForURL((u) => u.pathname === '/'); await p.waitForSelector('text=Citas de Outlook y Bookings');
   ok((await p.textContent('.p-box')).includes('Conectado como isabel@odlc.es'), 'Microsoft 365 conectado');
   await p.waitForTimeout(1200);
   // Bookings importada sola; la de notaría queda pendiente
@@ -61,7 +61,7 @@ const ok = (c, m) => { console.log((c ? '✔ ' : '✘ ') + m); if (!c) process.e
   ok((await q.request.get(B + '/api/reuniones')).status() === 401, 'La invitación no da acceso al panel');
   // Página de reservas (cliente)
   const c = await b.newContext({ ...devices['iPhone 13'] }); const w = await c.newPage(); w.on('pageerror', (e) => errs.push(e.message));
-  await w.goto(B + '/'); await w.waitForSelector('text=¿Qué tipo de cita?'); await w.screenshot({ path: S + '/shots/react-res1.png' });
+  await w.goto(B + '/reservar'); await w.waitForSelector('text=¿Qué tipo de cita?'); await w.screenshot({ path: S + '/shots/react-res1.png' });
   await w.click('text=Sesión inicial gratuita'); await w.waitForSelector('.b-hours button');
   ok(!(await w.locator('.b-days button').allTextContents()).some((x) => /sáb|dom/i.test(x)), 'Sin huecos en fin de semana');
   await w.click('.b-days button:nth-child(2)'); await w.click('.b-hours button >> nth=1'); await w.screenshot({ path: S + '/shots/react-res2.png' });
@@ -74,7 +74,7 @@ const ok = (c, m) => { console.log((c ? '✔ ' : '✘ ') + m); if (!c) process.e
   // Bookings: elegir la página compartida y reservar a través de ella
   await p.reload(); await p.waitForSelector('#bk'); await p.selectOption('#bk', 'OdlC@odlc.es'); await p.waitForSelector('text=Sesión gratuita OdlC · 30 min');
   ok(true, 'Página compartida de Bookings elegida y sus servicios visibles');
-  await w.goto(B + '/'); await w.click('text=Sesión gratuita OdlC'); await w.waitForSelector('.b-hours button');
+  await w.goto(B + '/reservar'); await w.click('text=Sesión gratuita OdlC'); await w.waitForSelector('.b-hours button');
   await w.click('.b-days button:nth-child(3)'); await w.click('.b-hours button >> nth=0'); await w.click('text=Continuar');
   await w.fill('#b-n', 'Lucía Martín'); await w.fill('#b-e', 'lucia@empresa.es'); await w.check('.chk input'); await w.click('text=Confirmar la cita'); await w.waitForURL('**/r/**'); await w.waitForSelector('.r-grid');
   const ap = await (await w.request.get(M + '/last-appt')).json();

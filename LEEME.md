@@ -4,8 +4,8 @@ App en React (código en `app-src/`) con API en PHP 8 (`api/`), servida por Host
 
 | URL | Qué es |
 |---|---|
-| `citas.odlc.es/` | Página de reservas para clientes (con Microsoft Bookings o directa a Outlook) |
-| `citas.odlc.es/panel` | Panel privado: acceso solo con Microsoft y solo personas autorizadas |
+| `citas.odlc.es/` | **Gestor de citas** (panel privado): acceso solo con Microsoft y solo personas autorizadas |
+| `citas.odlc.es/reservar` | Página de reservas para clientes (con Microsoft Bookings o directa a Outlook) |
 | `citas.odlc.es/r/:id` | Invitación pública, `.ics` y materiales (solo lectura) |
 | `citas.odlc.es/api/...` | API PHP |
 

@@ -69,7 +69,7 @@ try {
 
     // ===== Acceso: solo «Iniciar sesión con Microsoft» y solo cuentas autorizadas =====
     if ($path === '/entrar' && $method === 'GET') {
-        if (missing_config()) { header('Location: /panel?acceso=error&detalle=' . rawurlencode('El acceso con Microsoft aún no está configurado.'), true, 303); exit; }
+        if (missing_config()) { header('Location: /?acceso=error&detalle=' . rawurlencode('El acceso con Microsoft aún no está configurado.'), true, 303); exit; }
         header('Location: ' . ms_authorize_url('login'), true, 303); exit;
     }
     if ($path === '/logout' && $method === 'POST') { header('Set-Cookie: ' . clear_cookie()); send_json(['ok' => true]); }
@@ -77,12 +77,12 @@ try {
     // Vuelta desde Microsoft (inicio de sesión o conexión del calendario).
     // La cookie SameSite=Strict no viaja en esta redirección: la protegen el «state» de un solo uso, PKCE y el nonce.
     if ($path === '/ms/callback' && $method === 'GET') {
-        $target = '/panel';
+        $target = '/';
         try {
             $r = ms_callback($_GET);
             if ($r['purpose'] === 'login') header('Set-Cookie: ' . session_cookie($r['email']));
-            else $target = '/panel?ms=ok';
-        } catch (Throwable $e) { $target = '/panel?acceso=error&detalle=' . rawurlencode(mb_substr($e->getMessage(), 0, 250)); }
+            else $target = '/?ms=ok';
+        } catch (Throwable $e) { $target = '/?acceso=error&detalle=' . rawurlencode(mb_substr($e->getMessage(), 0, 250)); }
         send_html('<!doctype html><meta charset="utf-8"><meta name="robots" content="noindex"><meta http-equiv="refresh" content="0;url=' . esc($target) . '"><title>OdlC</title><p style="font-family:sans-serif">Volviendo al panel… <a href="' . esc($target) . '">Continuar</a></p>');
     }
 
@@ -111,8 +111,8 @@ try {
     }
     if ($path === '/ms/estado') send_json(ms_status() + ['adminEmail' => admin_email(), 'autoBookings' => (bool)cfg('auto_bookings', true)]);
     if ($path === '/ms/conectar' && $method === 'GET') {
-        if (empty($user['admin'])) { header('Location: /panel', true, 303); exit; }
-        if (ms_missing()) { header('Location: /panel?ms=error&detalle=' . rawurlencode('Faltan las claves de Microsoft Entra ID.')); exit; }
+        if (empty($user['admin'])) { header('Location: /', true, 303); exit; }
+        if (ms_missing()) { header('Location: /?ms=error&detalle=' . rawurlencode('Faltan las claves de Microsoft Entra ID.')); exit; }
         header('Location: ' . ms_authorize_url(), true, 303); exit;
     }
     if ($path === '/ms/desconectar' && $method === 'POST') { if (empty($user['admin'])) send_json(['error' => 'Solo la administradora.'], 403); del_key('ms/token'); send_json(['ok' => true]); }
