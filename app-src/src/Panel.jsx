@@ -202,7 +202,8 @@ function Dashboard({ user, onLogout }) {
           <form onSubmit={submit} noValidate>
             <div className="p-mode" role="radiogroup" aria-label="Enlace de Teams">
               <label><input type="radio" name="mode" value="manual" checked={modeNow === 'manual'} disabled={!!editing} onChange={set('mode')} /><span><b>Pegar enlace de Teams</b>Creo la reunión en Outlook o Teams y pego aquí su enlace.</span></label>
-              <label><input type="radio" name="mode" value="auto" checked={modeNow === 'auto' || modeNow === 'outlook'} disabled={!!editing || !autoOk} onChange={set('mode')} /><span><b>Crear en Outlook y Teams</b>El sistema crea el evento en mi calendario con el enlace real de Teams.</span></label>
+              {/* Solo con Teams de empresa: con Teams gratuito se pega el enlace */}
+              {(ms && ms.teams || (editing && editing.mode !== 'manual')) &&               <label><input type="radio" name="mode" value="auto" checked={modeNow === 'auto' || modeNow === 'outlook'} disabled={!!editing || !autoOk} onChange={set('mode')} /><span><b>Crear en Outlook y Teams</b>El sistema crea el evento en mi calendario con el enlace real de Teams.</span></label>}
             </div>
             {!editing && <div className="p-import">
               <label className="p-btn ghost" htmlFor="ics-file">Importar reunión de Outlook (.ics)</label>
