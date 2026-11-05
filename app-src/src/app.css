@@ -15,8 +15,8 @@
 .b-types b{display:block;font-size:15.5px;font-weight:600}
 .b-types small{display:block;color:var(--muted);font-size:13px;margin-top:3px;line-height:1.45}
 .b-types em{font-style:normal;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--brass);font-weight:600}
-.b-days{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 8px;scroll-snap-type:x mandatory;text-align:center}
-.b-days button{flex:0 0 64px;scroll-snap-align:start;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:9px 4px;cursor:pointer;font:inherit;color:var(--green)}
+.b-days{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:2px 2px 8px;text-align:center}
+.b-days button{min-width:0;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:9px 4px;cursor:pointer;font:inherit;color:var(--green)}
 .b-days button[aria-pressed=true]{background:var(--green);border-color:var(--green);color:#fff}
 .b-days small{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.6px;opacity:.75}
 .b-days b{display:block;font-size:20px;font-weight:500;line-height:1.2}
