@@ -155,12 +155,15 @@ try {
         $mode = ($b['mode'] ?? '') === 'auto' ? 'auto' : 'manual';
         $v = validate_input($b, $mode === 'manual');
         if (isset($v['errors'])) send_json(['error' => 'Revisa los campos marcados.', 'fields' => $v['errors']], 422);
-        $invite = $mode === 'auto' && !empty($b['sendInvite']);
+        // Modo manual con Microsoft conectado: también se crea el evento en Outlook (bloquea la agenda y Bookings) con el enlace pegado
+        $toOutlook = $mode === 'auto' || (!empty($b['toOutlook']) && ms_ready());
+        $invite = $toOutlook && !empty($b['sendInvite']);
         if ($invite && $v['data']['guestEmail'] === '') send_json(['error' => 'Falta el correo de algún invitado.', 'fields' => ['guests.0.email' => 'Escribe al menos un correo para enviar la convocatoria.']], 422);
         $now = time() * 1000; $id = new_id();
         $m = $v['data'] + ['id' => $id, 'uid' => "$id@odlc.es", 'mode' => $mode, 'source' => 'panel', 'tz' => ODLC_TZ, 'status' => 'programada', 'sequence' => 0,
             'createdAt' => $now, 'updatedAt' => $now, 'sendInvite' => $invite, 'materials' => []];
         if ($mode === 'auto') { $ev = create_teams_event($m, $invite); $m['teamsUrl'] = $ev['joinUrl']; $m['graphEventId'] = $ev['eventId']; }
+        elseif ($toOutlook) { $m['graphEventId'] = create_outlook_event($m, $invite); }
         set_json("m/$id", $m);
         send_json(['meeting' => admin_view($m)], 201);
     }
@@ -176,13 +179,14 @@ try {
             $v = validate_input($b, true, true);
             if (isset($v['errors'])) send_json(['error' => 'Revisa los campos marcados.', 'fields' => $v['errors']], 422);
             $next = array_replace($m, $v['data'], ['updatedAt' => time() * 1000, 'sequence' => ($m['sequence'] ?? 0) + 1]);
-            if (!empty($m['graphEventId']) && $m['mode'] === 'auto') { $next['sendInvite'] = !empty($b['sendInvite']) || !empty($m['sendInvite']); update_teams_event($next, $next['sendInvite']); }
+            if (empty($m['graphEventId']) && !empty($b['toOutlook']) && $m['mode'] === 'manual' && ms_ready()) { $next['sendInvite'] = !empty($b['sendInvite']); $next['graphEventId'] = create_outlook_event($next, $next['sendInvite']); }
+            elseif (!empty($m['graphEventId'])) { $next['sendInvite'] = !empty($b['sendInvite']) || !empty($m['sendInvite']); update_teams_event($next, $next['sendInvite']); }
             set_json($key, $next);
             send_json(['meeting' => admin_view($next)]);
         }
         if ($sub === 'cancelar' && $method === 'POST') {
             if ($m['status'] !== 'cancelada') {
-                if (!empty($m['graphEventId']) && $m['mode'] === 'auto') cancel_teams_event($m);
+                if (!empty($m['graphEventId'])) cancel_teams_event($m);
                 if (!empty($m['bookingAppointmentId'])) bk_cancel((string)$m['bookingsBusiness'], (string)$m['bookingAppointmentId']);
                 $m = array_replace($m, ['status' => 'cancelada', 'updatedAt' => time() * 1000, 'cancelledAt' => time() * 1000, 'sequence' => ($m['sequence'] ?? 0) + 1]);
                 set_json($key, $m);

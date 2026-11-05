@@ -101,6 +101,35 @@ function ics_url(array $m): string { return invite_url($m) . '/calendario.ics'; 
 function material_url(array $m, array $f): string { return invite_url($m) . '/material/' . $f['id']; }
 function card_url(): string { return ODLC_WEB . '/vcard_ioc'; }
 
+// Ficha HTML de la reunión para el evento de Outlook y el .ics (tablas y estilos en línea: así se ve bien en Outlook)
+function event_html(array $m): string {
+    $v = public_view($m); $inv = invite_url($m); $img = $inv . '/imagen.jpg?v=' . (int)($m['sequence'] ?? 0);
+    $f = 'font-family:Poppins,Segoe UI,Arial,sans-serif;';
+    $row = fn(string $k, string $val) => '<tr><td style="' . $f . 'padding:9px 14px;font-size:11px;letter-spacing:2px;color:#A8843F;text-transform:uppercase;white-space:nowrap;border-bottom:1px solid #ECE8DF;vertical-align:top">' . esc($k) . '</td>'
+        . '<td style="' . $f . 'padding:9px 14px;font-size:15px;color:#17302A;border-bottom:1px solid #ECE8DF">' . $val . '</td></tr>';
+    $names = array_values(array_filter(array_column(guests_of($m), 'name')));
+    $rows = $row('Fecha', esc($v['dia'] . ', ' . $v['fecha']))
+        . $row('Hora', '<b>' . esc($v['hora']) . ' h</b> – ' . esc($v['horaFin']) . ' h')
+        . $row('Zona', 'Madrid (' . esc($v['zona']) . ')')
+        . $row('Duración', esc((string)$v['duration']) . ' min · Microsoft Teams')
+        . $row('OdlC', esc(implode(' · ', $v['team'])))
+        . ($names ? $row(count($names) > 1 ? 'Invitados' : 'Invitado', esc(join_names($names))) : '');
+    $btn = fn(string $url, string $txt, bool $solid) => '<a href="' . esc($url) . '" style="' . $f . 'display:inline-block;margin:6px 8px 0 0;padding:12px 22px;border-radius:8px;font-size:13px;font-weight:600;letter-spacing:1px;text-decoration:none;'
+        . ($solid ? 'background:#17302A;color:#FFFFFF;border:1px solid #17302A' : 'background:#FFFFFF;color:#17302A;border:1px solid #A8843F') . '">' . esc($txt) . '</a>';
+    $teams = (string)($m['teamsUrl'] ?? '');
+    $mats = '';
+    foreach ($v['materials'] as $it) $mats .= '<li style="margin:3px 0"><a href="' . esc($it['url']) . '" style="color:#17302A">' . esc($it['name']) . '</a> <span style="color:#8A928E;font-size:12px">' . esc($it['label']) . '</span></li>';
+    return '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;border-collapse:collapse;background:#FFFFFF;border:1px solid #E4E0D6">'
+        . '<tr><td style="padding:0"><a href="' . esc($inv) . '"><img src="' . esc($img) . '" width="600" alt="OdlC · Invitación a reunión" style="display:block;width:100%;max-width:600px;height:auto;border:0"></a></td></tr>'
+        . '<tr><td style="padding:22px 22px 6px"><div style="' . $f . 'font-size:12px;letter-spacing:2px;color:#A8843F;text-transform:uppercase">' . ($v['estado'] === 'cancelada' ? 'Reunión cancelada' : 'Reunión con OdlC') . '</div>'
+        . '<div style="font-family:Lora,Georgia,serif;font-size:24px;color:#17302A;margin-top:6px">' . esc($v['subject']) . '</div></td></tr>'
+        . '<tr><td style="padding:10px 8px"><table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse">' . $rows . '</table></td></tr>'
+        . ($v['description'] !== '' ? '<tr><td style="' . $f . 'padding:6px 22px 4px;font-size:14px;line-height:1.55;color:#3D4A45">' . nl2br(esc($v['description'])) . '</td></tr>' : '')
+        . ($mats ? '<tr><td style="' . $f . 'padding:8px 22px 0;font-size:14px;color:#17302A"><div style="font-size:11px;letter-spacing:2px;color:#A8843F;text-transform:uppercase;margin-bottom:4px">Materiales</div><ul style="margin:0;padding-left:18px">' . $mats . '</ul></td></tr>' : '')
+        . '<tr><td style="padding:16px 22px 22px">' . ($teams !== '' && ($m['mode'] ?? '') !== 'auto' ? $btn($teams, 'UNIRSE A LA REUNIÓN', true) : '') . $btn($inv, 'INVITACIÓN Y CALENDARIO', ($m['mode'] ?? '') === 'auto')
+        . '<div style="' . $f . 'font-size:12px;color:#8A928E;margin-top:14px"><a href="' . esc($inv) . '" style="color:#8A928E">' . esc($inv) . '</a><br>' . esc(ODLC_NOMBRE) . ' · ' . esc(ODLC_EMPRESA) . ' · <a href="' . esc(card_url()) . '" style="color:#8A928E">tarjeta de contacto</a></div></td></tr></table>';
+}
+
 function calendar_body(array $m): string {
     $l = [];
     if (!empty($m['description'])) $l[] = $m['description'];
@@ -152,7 +181,7 @@ function build_ics(array $m): string {
         'SEQUENCE:' . (int)($m['sequence'] ?? 0),
         'DTSTART;TZID=Europe/Madrid:' . $loc($m['startUtc']), 'DTEND;TZID=Europe/Madrid:' . $loc($m['endUtc']),
         'SUMMARY:' . ics_esc(($cancel ? 'Cancelada: ' : '') . $m['subject']),
-        'DESCRIPTION:' . ics_esc(calendar_body($m)), 'LOCATION:Microsoft Teams',
+        'DESCRIPTION:' . ics_esc(calendar_body($m)), 'X-ALT-DESC;FMTTYPE=text/html:' . ics_esc('<html><body>' . event_html($m) . '</body></html>'), 'LOCATION:Microsoft Teams',
         'ORGANIZER;CN=' . ics_esc(ODLC_NOMBRE) . ':mailto:' . ODLC_EMAIL,
         'STATUS:' . ($cancel ? 'CANCELLED' : 'CONFIRMED'), 'TRANSP:OPAQUE'];
     if (!empty($m['teamsUrl'])) { $l[] = 'URL:' . $m['teamsUrl']; $l[] = 'X-MICROSOFT-SKYPETEAMSMEETINGURL:' . $m['teamsUrl']; }

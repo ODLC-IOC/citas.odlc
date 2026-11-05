@@ -43,7 +43,7 @@ const ok = (c, m) => { console.log((c ? '✔ ' : '✘ ') + m); if (!c) process.e
   // Reunión automática con materiales y asistentes
   await p.check('input[value=auto]'); await p.fill('[aria-label="Nombre del invitado 1"]', 'María'); await p.fill('[aria-label="Correo del invitado 1"]', 'maria@cliente.es');
   await p.click('text=+ Añadir invitado'); await p.fill('[aria-label="Nombre del invitado 2"]', 'Juan'); await p.fill('[aria-label="Correo del invitado 2"]', 'juan@cliente.es');
-  await p.check('text=Enviar también la convocatoria'); await p.fill('#team', 'Isabel Olivares de la Cerda\nAna Pérez');
+  await p.check('text=Enviar la convocatoria por correo'); await p.fill('#team', 'Isabel Olivares de la Cerda\nAna Pérez');
   await p.fill('#subject', 'Revisión del pacto'); await p.fill('#date', '2026-11-20'); await p.fill('#time', '11:00');
   await p.setInputFiles('#files', S + '/orden.pdf'); await p.fill('.p-linkrow input[type=url]', 'https://odlcsl-my.sharepoint.com/:w:/g/x'); await p.fill('.p-linkrow input:not([type])', 'Borrador del pacto');
   await p.click('form button.p-btn:not(.ghost)'); await p.waitForSelector('text=Invitación creada.'); await p.waitForTimeout(500);
@@ -53,6 +53,10 @@ const ok = (c, m) => { console.log((c ? '✔ ' : '✘ ') + m); if (!c) process.e
     const ev = await (await p.request.get(M + '/v1.0/me/events/' + encodeURIComponent(mm.graphEventId))).json();
     ok(mm.guests.length === 2 && (ev.attendees || []).map((a) => a.emailAddress.address).join() === 'maria@cliente.es,juan@cliente.es', 'Dos invitados: los dos reciben la convocatoria de Outlook y Teams'); }
   await p.screenshot({ path: S + '/shots/react-panel.png', fullPage: true });
+  // Enlace de Teams pegado a mano (p. ej. teams.live.com): también se crea en Outlook y se envía la convocatoria
+  { const r = await p.request.post(B + '/api/reuniones', { headers: { 'Content-Type': 'application/json', Origin: B }, data: { mode: 'manual', toOutlook: true, sendInvite: true, guests: [{ name: 'Alex', email: 'alex@cliente.es' }, { name: 'Marc', email: 'marc@cliente.es' }], subject: 'Reunión In&Vest', date: '2026-11-27', time: '11:30', duration: 60, teamsUrl: 'https://teams.live.com/meet/9343587836949?p=abc', team: 'Isabel Olivares de la Cerda' } });
+    const mm = (await r.json()).meeting; const ev = mm && mm.graphEventId ? await (await p.request.get(M + '/v1.0/me/events/' + encodeURIComponent(mm.graphEventId))).json() : {};
+    ok(r.status() === 201 && (ev.attendees || []).length === 2 && JSON.stringify(ev.body || {}).includes('teams.live.com') && !ev.isOnlineMeeting, 'Enlace manual: evento en Outlook (bloquea agenda) y convocatoria por correo a los dos'); }
   // Invitación pública en móvil
   const m = await b.newContext({ ...devices['iPhone 13'], acceptDownloads: true }); const q = await m.newPage(); q.on('pageerror', (e) => errs.push(e.message));
   const raw = await (await q.request.get(url)).text(); ok(raw.includes('og:image') && raw.includes('Invitación a reunión · OdlC') && !raw.includes('María') && raw.includes('/imagen.jpg?v='), 'Open Graph en el HTML sin datos privados');

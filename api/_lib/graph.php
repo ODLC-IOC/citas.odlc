@@ -141,13 +141,13 @@ function links_html(array $m): string {
     // La imagen de la invitación (enlazada) y debajo el enlace, como en la vista previa de WhatsApp
     return '<p><a href="' . esc(invite_url($m)) . '"><img src="' . esc(invite_url($m) . '/imagen.jpg?v=' . (int)($m['sequence'] ?? 0)) . '" width="480" alt="OdlC · Invitación a reunión" style="display:block;width:480px;max-width:100%;height:auto;border:0;border-radius:8px"></a></p>'
         . '<p style="font-family:Arial,sans-serif;font-size:14px;color:#17302A"><a href="' . esc(invite_url($m)) . '">' . esc(invite_url($m)) . '</a><br>'
-        . 'Invitación, materiales y calendario · <a href="' . esc(card_url()) . '">Tarjeta de contacto de ' . esc(ODLC_NOMBRE) . '</a></p><hr>';
+        . 'Invitación, materiales y calendario · <a href="' . esc(card_url()) . '">Tarjeta de contacto de ' . esc(ODLC_NOMBRE) . '</a></p>'
+        . (($m['mode'] ?? '') !== 'auto' && !empty($m['teamsUrl']) ? '<p style="font-family:Arial,sans-serif;font-size:15px"><b><a href="' . esc($m['teamsUrl']) . '">Unirse a la reunión de Microsoft Teams</a></b></p>' : '') . '<hr>';
 }
 function event_payload(array $m, bool $invite): array {
-    $text = implode("\n\n", array_filter([$m['description'] ?? '', 'Por OdlC: ' . implode(', ', team_of($m)), !empty($m['guestName']) ? 'Invitado: ' . $m['guestName'] : '']));
     $e = [
         'subject' => $m['subject'],
-        'body' => ['contentType' => 'HTML', 'content' => links_html($m) . '<p>' . nl2br(esc($text)) . '</p>'],
+        'body' => ['contentType' => 'HTML', 'content' => event_html($m)],
         'start' => ['dateTime' => local_iso($m['startUtc']), 'timeZone' => ODLC_TZ],
         'end' => ['dateTime' => local_iso($m['endUtc']), 'timeZone' => ODLC_TZ],
     ];
@@ -164,6 +164,12 @@ function create_teams_event(array $m, bool $invite): array {
     for ($i = 0; !$join && $i < 4; $i++) { usleep(1200000); $a = graph('GET', '/me/events/' . rawurlencode($ev['id']) . '?$select=onlineMeeting'); $join = $a['onlineMeeting']['joinUrl'] ?? ''; }
     if (!$join) { graph_code('DELETE', '/me/events/' . rawurlencode($ev['id'])); throw new GraphError('Microsoft no ha devuelto el enlace de Teams (no se ha dejado ningún evento en tu calendario). Revisa que tu cuenta tiene Teams o usa el modo manual.'); }
     return ['eventId' => $ev['id'], 'joinUrl' => $join];
+}
+// Evento normal de Outlook con el enlace de Teams pegado a mano (cuentas sin Teams de empresa, p. ej. teams.live.com)
+function create_outlook_event(array $m, bool $invite): string {
+    $ev = graph('POST', '/me/events', event_payload($m, $invite) + ['transactionId' => $m['id'], 'showAs' => 'busy',
+        'location' => ['displayName' => 'Microsoft Teams', 'locationUri' => (string)($m['teamsUrl'] ?? ''), 'locationType' => 'default']]);
+    return (string)$ev['id'];
 }
 function update_teams_event(array $m, bool $invite): void { graph('PATCH', '/me/events/' . rawurlencode($m['graphEventId']), event_payload($m, $invite)); }
 function cancel_teams_event(array $m): void {
