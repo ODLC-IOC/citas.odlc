@@ -183,12 +183,22 @@ function cancel_teams_event(array $m): void {
 function outlook_events(): array {
     $from = gmdate('Y-m-d\TH:i:s\Z'); $to = gmdate('Y-m-d\TH:i:s\Z', time() + 60 * 86400);
     $d = graph('GET', '/me/calendarView?' . http_build_query(['startDateTime' => $from, 'endDateTime' => $to, '$top' => 100, '$orderby' => 'start/dateTime',
-        '$select' => 'id,subject,start,end,isOnlineMeeting,onlineMeeting,attendees,isCancelled,bodyPreview,categories,transactionId,organizer'], '', '&', PHP_QUERY_RFC3986), null, null, 'UTC');
+        '$select' => 'id,subject,start,end,isOnlineMeeting,onlineMeeting,attendees,isCancelled,bodyPreview,body,location,categories,transactionId,organizer'], '', '&', PHP_QUERY_RFC3986), null, null, 'UTC');
     $linked = get_json('ms/linked') ?? [];
+    // Enlace de Teams: el de Outlook, o el que vaya pegado en el lugar o en el texto (Teams personal, citas de Bookings…)
+    $teamsIn = function (array $e): string {
+        $j = (string)($e['onlineMeeting']['joinUrl'] ?? '');
+        if ($j !== '') return $j;
+        $hay = ($e['location']['locationUri'] ?? '') . ' ' . ($e['location']['displayName'] ?? '') . ' ' . ($e['body']['content'] ?? '');
+        return preg_match('#https://teams\.(?:microsoft\.com|live\.com|cloud\.microsoft)/[^\s"\'<>]+#i', html_entity_decode($hay), $x) ? $x[0] : '';
+    };
     $out = [];
     foreach ($d['value'] ?? [] as $e) {
-        $join = $e['onlineMeeting']['joinUrl'] ?? '';
-        if (!$join || !empty($e['isCancelled'])) continue;
+        if (!empty($e['isCancelled'])) continue;
+        $join = $teamsIn($e);
+        $others = array_filter($e['attendees'] ?? [], fn($a) => strtolower($a['emailAddress']['address'] ?? '') !== admin_email());
+        $isBk = (bool)preg_match('/bookings|bookwithme|reserva/i', ($e['bodyPreview'] ?? '') . ' ' . implode(' ', $e['categories'] ?? []));
+        if (!$join && !$others && !$isBk) continue; // eventos personales sin invitados ni Teams: no son citas
         $gs = [];
         foreach ($e['attendees'] ?? [] as $a) { $addr = strtolower($a['emailAddress']['address'] ?? ''); if ($addr && $addr !== admin_email() && count($gs) < MAX_GUESTS) { $nm = mb_substr((string)($a['emailAddress']['name'] ?? ''), 0, 80); $gs[] = ['name' => str_contains($nm, '@') ? '' : $nm, 'email' => $addr, 'phone' => '']; } }
         $guest = $gs ? ['name' => join_names(array_values(array_filter(array_column($gs, 'name')))), 'address' => $gs[0]['email']] : null;
