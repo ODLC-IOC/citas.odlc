@@ -214,6 +214,11 @@ function outlook_events(): array {
         $guest = $gs ? ['name' => join_names(array_values(array_filter(array_column($gs, 'name')))), 'address' => $gs[0]['email']] : null;
         $start = strtotime($e['start']['dateTime'] . 'Z') * 1000; $end = strtotime($e['end']['dateTime'] . 'Z') * 1000;
         $mid = $linked[$e['id']] ?? (preg_match(ID_RE, (string)($e['transactionId'] ?? '')) && get_json('m/' . $e['transactionId']) ? $e['transactionId'] : null);
+        // Si en Outlook la reunión ya tiene su Teams de empresa, la invitación pasa a usar ese enlace (sin tocar nada a mano)
+        $biz = (string)($e['onlineMeeting']['joinUrl'] ?? '');
+        if ($mid && $biz !== '' && ($mm = get_json('m/' . $mid)) && ($mm['teamsUrl'] ?? '') !== $biz && ($mm['status'] ?? '') !== 'cancelada') {
+            $mm['teamsUrl'] = $biz; $mm['updatedAt'] = time() * 1000; $mm['sequence'] = (int)($mm['sequence'] ?? 0) + 1; set_json('m/' . $mid, $mm);
+        }
         $preview = (string)($e['bodyPreview'] ?? '');
         $out[] = ['eventId' => $e['id'], 'subject' => $e['subject'] ?? '(sin asunto)', 'startUtc' => $start, 'endUtc' => $end,
             'fecha' => fecha_larga($start), 'hora' => hora_corta($start), 'horaFin' => hora_corta($end), 'joinUrl' => $join,
