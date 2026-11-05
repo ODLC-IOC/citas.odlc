@@ -16,7 +16,7 @@ if ($m && $x === 'calendario.ics') {
     header('Content-Disposition: inline; filename="reunion-odlc.ics"');
     echo build_ics($m); exit;
 }
-if ($m && preg_match('/^(imagen|vista)(-\d+c?)?\.jpg$/', $x)) {
+if ($m && preg_match('/^(imagen|vista|tarjeta)(-\d+c?)?\.jpg$/', $x)) {
     $img = og_image_jpg($m);
     base_headers();
     header('Content-Type: image/jpeg');
@@ -42,7 +42,7 @@ $html = (string)file_get_contents(dirname(__DIR__) . '/index.html');
 $site = site_url();
 // Imagen propia de cada reunión (fecha, hora, zona, duración); ?v= cambia al editarla para que WhatsApp no use la antigua
 // Sin «?» en la dirección de la imagen (como las webs que WhatsApp muestra en grande): la versión va en el nombre
-$img = $m ? invite_url($m) . '/vista-' . (int)($m['sequence'] ?? 0) . (estado($m) === 'cancelada' ? 'c' : '') . '.jpg' : $site . '/og-invitacion.png';
+$img = $m ? invite_url($m) . '/tarjeta-' . (int)($m['sequence'] ?? 0) . (estado($m) === 'cancelada' ? 'c' : '') . '.jpg' : $site . '/og-invitacion.png';
 $og = '<title>Invitación a reunión · OdlC</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
