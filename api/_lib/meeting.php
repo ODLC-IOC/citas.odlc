@@ -103,7 +103,7 @@ function card_url(): string { return ODLC_WEB . '/vcard_ioc'; }
 
 // Ficha HTML de la reunión para el evento de Outlook y el .ics (tablas y estilos en línea: así se ve bien en Outlook)
 function event_html(array $m): string {
-    $v = public_view($m); $inv = invite_url($m); $img = $inv . '/imagen.jpg?v=' . (int)($m['sequence'] ?? 0);
+    $v = public_view($m); $inv = invite_url($m); $img = $inv . '/imagen-' . (int)($m['sequence'] ?? 0) . '.jpg';
     $f = 'font-family:Poppins,Segoe UI,Arial,sans-serif;';
     $row = fn(string $k, string $val) => '<tr><td style="' . $f . 'padding:9px 14px;font-size:11px;letter-spacing:2px;color:#A8843F;text-transform:uppercase;white-space:nowrap;border-bottom:1px solid #ECE8DF;vertical-align:top">' . esc($k) . '</td>'
         . '<td style="' . $f . 'padding:9px 14px;font-size:15px;color:#17302A;border-bottom:1px solid #ECE8DF">' . $val . '</td></tr>';
@@ -152,7 +152,7 @@ function calendar_html(array $m): string {
     $names = array_values(array_filter(array_column(guests_of($m), 'name')));
     $teams = (string)($m['teamsUrl'] ?? '');
     $l = [
-        '<a href="' . esc($inv) . '"><img src="' . esc($inv . '/imagen.jpg?v=' . (int)($m['sequence'] ?? 0)) . '" width="520" alt="OdlC · Invitación a reunión"></a>',
+        '<a href="' . esc($inv) . '"><img src="' . esc($inv . '/imagen-' . (int)($m['sequence'] ?? 0) . '.jpg') . '" width="520" alt="OdlC · Invitación a reunión"></a>',
         '<b>' . esc($v['subject']) . '</b>',
         '<b>Fecha:</b> ' . esc($v['dia'] . ', ' . $v['fecha']) . '<br><b>Hora:</b> ' . esc($v['hora']) . '–' . esc($v['horaFin']) . ' h (Madrid, ' . esc($v['zona']) . ')<br><b>Duración:</b> ' . esc((string)$v['duration']) . ' min · Microsoft Teams',
         '<b>OdlC:</b> ' . esc(implode(', ', $v['team'])) . ($names ? '<br><b>' . (count($names) > 1 ? 'Invitados' : 'Invitado') . ':</b> ' . esc(join_names($names)) : ''),
@@ -223,8 +223,9 @@ function whatsapp_text(array $m, ?string $name = null): string {
         $name !== '' ? "Hola, $name:" : 'Hola:', '',
         $varios ? 'Os envío la invitación para nuestra reunión con OdlC.' : 'Te envío la invitación para nuestra reunión con OdlC.', '',
         '📅 ' . fecha_larga($m['startUtc']), clock_emoji($h) . " $h h (Madrid)", '💻 Microsoft Teams', '',
-        $varios ? 'Podéis consultar la invitación, uniros a la reunión y añadirla a vuestro calendario aquí:' : 'Puedes consultar la invitación, unirte a la reunión y añadirla a tu calendario aquí:', '',
-        invite_url($m), '', 'Un saludo,', '', ODLC_NOMBRE, ODLC_EMPRESA,
+        $varios ? 'Podéis consultar la invitación, uniros a la reunión y añadirla a vuestro calendario en el enlace de abajo.' : 'Puedes consultar la invitación, unirte a la reunión y añadirla a tu calendario en el enlace de abajo.', '',
+        'Un saludo,', ODLC_NOMBRE . ' · ' . ODLC_EMPRESA, '',
+        invite_url($m), // el enlace, solo y al final: WhatsApp pone arriba la imagen grande y debajo el enlace
     ]);
 }
 function whatsapp_link(array $m, ?string $text = null, ?string $phone = null): string {
