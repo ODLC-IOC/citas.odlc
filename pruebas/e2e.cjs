@@ -90,6 +90,27 @@ const ok = (c, m) => { console.log((c ? '✔ ' : '✘ ') + m); if (!c) process.e
   const ap = await (await w.request.get(M + '/last-appt')).json();
   ok(ap.serviceId === 'SV1' && ap.customers[0].emailAddress === 'lucia@empresa.es' && ap.isLocationOnline === true && ap.staffMemberIds[0] === 'ST1', 'Cita creada en Microsoft Bookings con el cliente y Teams');
   ok(await w.getAttribute('a.t-btn', 'href') === 'https://teams.microsoft.com/l/meetup-join/BOOKINGSAPPT', 'La invitación lleva el Teams que genera Bookings');
+  // El invitado cambia y cancela su cita con el código y su correo
+  { const code = await w.textContent('.r-code b'); const id = new URL(w.url()).pathname.split('/')[2];
+    ok(/^[A-Z2-9]{6}$/.test(code), 'La invitación muestra el código de la cita');
+    const bad = await w.request.post(B + '/api/cita/buscar', { headers: { Origin: B }, data: { codigo: code, email: 'otro@empresa.es' } });
+    ok(bad.status() === 404, 'Código con otro correo: no se encuentra');
+    await w.click('.r-code a'); await w.waitForSelector('#g-c'); ok((await w.inputValue('#g-c')) === code, 'El enlace rellena el código');
+    await w.fill('#g-e', 'LUCIA@empresa.es'); await w.click('text=Ver mi cita'); await w.waitForSelector('text=Cambiar fecha u hora');
+    await w.screenshot({ path: S + '/shots/react-gest1.png' });
+    await w.click('text=Cambiar fecha u hora'); await w.waitForSelector('.b-hours button');
+    await w.click('.b-days button:nth-child(4)'); await w.click('.b-hours button >> nth=1'); await w.click('text=Confirmar el cambio'); await w.waitForSelector('text=Cita cambiada');
+    const pt = await (await w.request.get(M + '/last-patch')).json();
+    const after = (await (await p.request.get(B + '/api/reuniones')).json()).meetings.find((x) => x.id === id);
+    ok(pt.patch && pt.patch.startDateTime && after && after.estado === 'proxima', 'Cambio de fecha: Bookings movido y cita actualizada');
+    await w.screenshot({ path: S + '/shots/react-gest2.png' });
+    await w.goto(B + '/mi-cita?c=' + code); await w.fill('#g-e', 'lucia@empresa.es'); await w.click('text=Ver mi cita');
+    await w.click('text=Cancelar la cita'); await w.click('text=Sí, cancelar la cita'); await w.waitForSelector('text=Hemos avisado');
+    const pc = await (await w.request.get(M + '/last-patch')).json();
+    const fin = (await (await p.request.get(B + '/api/reuniones')).json()).meetings.find((x) => x.id === id);
+    ok(pc.cancels >= 1 && fin.estado === 'cancelada', 'Cancelación por el invitado: Bookings cancelado y cita cancelada');
+    const again = await (await w.request.post(B + '/api/cita/cancelar', { headers: { Origin: B }, data: { codigo: code, email: 'lucia@empresa.es' } })).status();
+    ok(again === 409, 'Una cita cancelada ya no se puede tocar'); }
   { const r = await p.request.post(B + '/api/reuniones', { headers: { 'Content-Type': 'application/json', Origin: B }, data: { mode: 'manual', toBookings: true, guests: [{ name: 'Alex', email: 'alex@cliente.es' }, { name: 'Marc', email: 'marc@cliente.es' }], subject: 'In&Vest', date: '2026-11-26', time: '11:30', duration: 60, teamsUrl: 'https://teams.live.com/meet/1?p=x', team: 'Isabel Olivares de la Cerda' } });
     const a2 = await (await p.request.get(M + '/last-appt')).json(); const mm = (await r.json()).meeting;
     ok(r.status() === 201 && mm.bookingAppointmentId === 'AP1' && a2.customers.length === 2 && a2.isLocationOnline === false && a2.serviceLocation.locationUri.includes('teams.live.com') && !mm.graphEventId, 'Reunión del panel registrada en Bookings con los dos invitados y el enlace pegado'); }

@@ -321,6 +321,10 @@ function bk_create(string $biz, array $sv, array $m, string $company, ?bool $onl
     $join = (string)($ap['joinWebUrl'] ?? '');
     return ['appointmentId' => $ap['id'] ?? '', 'joinUrl' => $join];
 }
+function bk_move(string $biz, string $apId, int $startMs, int $endMs): void {
+    $utc = fn(int $ms) => ['dateTime' => gmdate('Y-m-d\\TH:i:s', intdiv($ms, 1000)) . '.0000000+00:00', 'timeZone' => 'UTC'];
+    graph('PATCH', '/solutions/bookingBusinesses/' . rawurlencode($biz) . '/appointments/' . rawurlencode($apId), ['startDateTime' => $utc($startMs), 'endDateTime' => $utc($endMs)]);
+}
 function bk_cancel(string $biz, string $apId): void {
     $c = graph_code('POST', '/solutions/bookingBusinesses/' . rawurlencode($biz) . '/appointments/' . rawurlencode($apId) . '/cancel', ['cancellationMessage' => 'La reunión con OdlC queda cancelada.']);
     if ($c >= 400 && $c !== 404) throw new GraphError("Bookings no ha podido cancelar la cita ($c).");

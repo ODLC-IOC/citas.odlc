@@ -52,3 +52,6 @@
 .p-day { margin-top: 18px; }
 .p-day-t { font-family: var(--serif, Lora, Georgia, serif); font-weight: 400; font-size: 1.15rem; color: #17302A; margin: 0 0 4px; padding-bottom: 6px; border-bottom: 2px solid #A8843F; }
 .p-item-ev { border-left: 3px dashed #A8843F; padding-left: 12px; }
+.r-code { margin: 18px 0 0; text-align: center; font-size: 13px; color: #5F6B66; }
+.r-code b { letter-spacing: 2px; color: #17302A; }
+.r-code a { color: #A8843F; }

@@ -6,11 +6,13 @@ import './app.css';
 import Invitation from './Invitation.jsx';
 import Booking from './Booking.jsx';
 import Panel from './Panel.jsx';
+import Manage from './Manage.jsx';
 
 function App() {
   const path = window.location.pathname;
   const inv = path.match(/^\/r\/([A-Za-z0-9_-]{22})\/?$/);
   if (inv) return <Invitation id={inv[1]} />;
+  if (path.startsWith('/mi-cita')) return <Manage />;
   // citas.odlc.es abre el gestor de citas (privado); la página pública de reservas está en /reservar
   if (path.startsWith('/reservar') || path.startsWith('/cita')) return <Booking />;
   return <Panel />;

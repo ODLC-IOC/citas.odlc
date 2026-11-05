@@ -37,6 +37,8 @@ export default function Invitation({ id }) {
       {m.teamsUrl && <a className="t-btn" href={m.teamsUrl} target="_blank" rel="noopener noreferrer">{Ico.teams}Unirse a la reunión</a>}
       {m.estado === 'cancelada' && <a className="t-btn t-light" href={c.ics}>{Ico.cal}Actualizar mi calendario</a>}
       {m.estado === 'proxima' && <button type="button" className="t-btn t-light" onClick={() => setOpen(true)}>{Ico.cal}Añadir al calendario</button>}
+      {m.estado === 'proxima' && m.codigo && (
+        <p className="r-code">Código de su cita: <b>{m.codigo}</b> · <a href={'/mi-cita?c=' + m.codigo}>Cambiar o cancelar</a></p>)}
       {open && (
         <div className="r-back" onClick={() => setOpen(false)}>
           <div className="r-sheet" role="dialog" aria-modal="true" aria-label="Elegir calendario" onClick={(e) => e.stopPropagation()}>

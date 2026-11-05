@@ -51,6 +51,27 @@ function guest_names(array $m): string {
     return $n !== '' ? $n : (str_contains((string)($m['guestName'] ?? ''), '@') ? '' : (string)($m['guestName'] ?? ''));
 }
 
+// Código de la cita (6 caracteres) para que el invitado la cambie o cancele con su correo. Se deriva del id: no se guarda.
+function cita_code(array $m): string {
+    $h = hash_hmac('sha256', 'cita:' . $m['id'], (string)cfg('session_secret'));
+    $abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; $c = '';
+    for ($i = 0; $i < 6; $i++) $c .= $abc[hexdec(substr($h, $i * 2, 2)) % 32];
+    return $c;
+}
+function manage_url(array $m): string { return site_url() . '/mi-cita?c=' . cita_code($m); }
+function find_by_code(string $code): ?array {
+    $code = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $code));
+    if (strlen($code) !== 6) return null;
+    foreach (list_meetings() as $m) if (empty($m['archived']) && hash_equals(cita_code($m), $code)) return $m;
+    return null;
+}
+function guest_has_email(array $m, string $email): bool {
+    $email = mb_strtolower(trim($email));
+    if ($email === '') return false;
+    foreach (guests_of($m) as $g) if ($g['email'] !== '' && hash_equals(mb_strtolower($g['email']), $email)) return true;
+    return false;
+}
+
 function validate_input(array $b, bool $requireTeams, bool $allowPast = false): array {
     $e = [];
     $team = array_values(array_filter(array_map('trim', preg_split('/[\n,;]+/', clean_str($b['team'] ?? '', 400)) ?: [])));
@@ -136,7 +157,7 @@ function event_html(array $m): string {
         . ($v['description'] !== '' ? '<tr><td style="' . $f . 'padding:6px 22px 4px;font-size:14px;line-height:1.55;color:#3D4A45">' . nl2br(esc($v['description'])) . '</td></tr>' : '')
         . ($mats ? '<tr><td style="' . $f . 'padding:8px 22px 0;font-size:14px;color:#17302A"><div style="font-size:11px;letter-spacing:2px;color:#A8843F;text-transform:uppercase;margin-bottom:4px">Materiales</div><ul style="margin:0;padding-left:18px">' . $mats . '</ul></td></tr>' : '')
         . '<tr><td style="padding:16px 22px 22px">' . ($teams !== '' && ($m['mode'] ?? '') !== 'auto' ? $btn($teams, 'UNIRSE A LA REUNIÓN', true) : '') . $btn($inv, 'INVITACIÓN Y CALENDARIO', ($m['mode'] ?? '') === 'auto')
-        . '<div style="' . $f . 'font-size:12px;color:#8A928E;margin-top:14px"><a href="' . esc($inv) . '" style="color:#8A928E">' . esc($inv) . '</a><br>' . esc(ODLC_NOMBRE) . ' · ' . esc(ODLC_EMPRESA) . ' · <a href="' . esc(card_url()) . '" style="color:#8A928E">tarjeta de contacto</a></div></td></tr></table>';
+        . '<div style="' . $f . 'font-size:12px;color:#8A928E;margin-top:14px"><a href="' . esc($inv) . '" style="color:#8A928E">' . esc($inv) . '</a><br>Código de la cita: <b>' . esc(cita_code($m)) . '</b> · <a href="' . esc(manage_url($m)) . '" style="color:#8A928E">cambiar o cancelar</a><br>' . esc(ODLC_NOMBRE) . ' · ' . esc(ODLC_EMPRESA) . ' · <a href="' . esc(card_url()) . '" style="color:#8A928E">tarjeta de contacto</a></div></td></tr></table>';
 }
 
 function calendar_body(array $m): string {
@@ -268,7 +289,7 @@ function public_view(array $m): array {
         ? ['kind' => 'link', 'name' => $f['name'], 'url' => $f['url'], 'label' => is_onedrive($f['url']) ? 'OneDrive' : 'Enlace']
         : ['kind' => 'file', 'name' => $f['name'], 'url' => material_url($m, $f), 'label' => FILE_TYPES[$f['type']] ?? 'Archivo', 'size' => size_text((int)$f['size'])], $m['materials'] ?? []);
     return [
-        'id' => $m['id'], 'estado' => $st, 'subject' => $m['subject'], 'guestName' => guest_names($m), 'team' => team_of($m),
+        'id' => $m['id'], 'codigo' => cita_code($m), 'estado' => $st, 'subject' => $m['subject'], 'guestName' => guest_names($m), 'team' => team_of($m),
         'description' => $m['description'] ?? '', 'duration' => $m['duration'],
         'fecha' => fecha_corta($m['startUtc']), 'dia' => dia_semana($m['startUtc']), 'fechaLarga' => fecha_larga($m['startUtc']),
         'hora' => hora_corta($m['startUtc']), 'horaFin' => hora_corta($m['endUtc']), 'zona' => utc_offset($m['startUtc']),

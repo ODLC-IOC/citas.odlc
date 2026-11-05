@@ -28,6 +28,46 @@ try {
         $tipo = booking_type((string)($_GET['tipo'] ?? '')) ;
         send_json(['disponible' => true, 'tipos' => $tipos, 'huecos' => $tipo ? booking_slots($tipo) : new stdClass()]);
     }
+    // ===== El invitado gestiona su cita con el código y su correo =====
+    if (str_starts_with($path, '/cita/') && $method === 'POST') {
+        if (!same_origin()) send_json(['error' => 'Origen no permitido'], 403);
+        $b = body_json();
+        $rk = 'rl/cita-' . substr(hash('sha256', client_ip()), 0, 32);
+        $rl = get_json($rk) ?? ['n' => 0, 'from' => time()];
+        if ($rl['from'] < time() - 3600) $rl = ['n' => 0, 'from' => time()];
+        if ($rl['n'] >= 12) send_json(['error' => 'Demasiados intentos. Inténtelo dentro de una hora o escriba a ' . ODLC_EMAIL . '.'], 429);
+        $m = find_by_code((string)($b['codigo'] ?? ''));
+        if (!$m || !guest_has_email($m, (string)($b['email'] ?? ''))) {
+            $rl['n']++; set_json($rk, $rl);
+            send_json(['error' => 'No encontramos ninguna cita con ese código y ese correo. Revise los datos (el código está en su invitación).'], 404);
+        }
+        $key = 'm/' . $m['id']; $now = time() * 1000;
+        $editable = estado($m) === 'proxima' && $m['startUtc'] > $now + 2 * 3600000;
+        $tipo = ['id' => 'cambio', 'nombre' => $m['subject'], 'duracion' => (int)$m['duration']];
+        if ($path === '/cita/buscar') {
+            send_json(['cita' => public_view($m), 'editable' => $editable, 'huecos' => $editable && ms_ready() ? booking_slots($tipo) : new stdClass()]);
+        }
+        if (!$editable) send_json(['error' => 'Esta cita ya no se puede cambiar desde aquí (faltan menos de 2 horas, ya pasó o está cancelada). Escriba a ' . ODLC_EMAIL . '.'], 409);
+        if ($path === '/cita/cancelar') {
+            if (!empty($m['graphEventId'])) cancel_teams_event($m);
+            if (!empty($m['bookingAppointmentId'])) bk_cancel((string)$m['bookingsBusiness'], (string)$m['bookingAppointmentId']);
+            $m = array_replace($m, ['status' => 'cancelada', 'cancelledBy' => 'invitado', 'updatedAt' => $now, 'cancelledAt' => $now, 'sequence' => ($m['sequence'] ?? 0) + 1]);
+            set_json($key, $m);
+            send_json(['ok' => true, 'cita' => public_view($m)]);
+        }
+        if ($path === '/cita/cambiar') {
+            $date = (string)($b['fecha'] ?? ''); $time = (string)($b['hora'] ?? '');
+            if (!ms_ready() || !in_array($time, booking_slots($tipo)[$date] ?? [], true)) send_json(['error' => 'Ese hueco ya no está libre. Elija otro.'], 422);
+            $start = madrid_to_utc($date, $time);
+            $next = array_replace($m, ['startUtc' => $start, 'endUtc' => $start + (int)$m['duration'] * 60000, 'date' => $date, 'time' => $time,
+                'updatedAt' => $now, 'sequence' => ($m['sequence'] ?? 0) + 1, 'movedBy' => 'invitado', 'movedAt' => $now]);
+            if (!empty($m['bookingAppointmentId'])) bk_move((string)$m['bookingsBusiness'], (string)$m['bookingAppointmentId'], $next['startUtc'], $next['endUtc']);
+            elseif (!empty($m['graphEventId'])) update_teams_event($next, true); // Outlook envía la actualización a todos
+            set_json($key, $next);
+            send_json(['ok' => true, 'cita' => public_view($next)]);
+        }
+        send_json(['error' => 'No encontrado'], 404);
+    }
     if ($path === '/reservar' && $method === 'POST') {
         if (!same_origin()) send_json(['error' => 'Origen no permitido'], 403);
         $b = body_json();

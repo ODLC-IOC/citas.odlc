@@ -37,7 +37,9 @@ http.createServer((req, res) => {
     if (u.pathname.endsWith('/services')) return send(200, { value: [{ id: 'SV1', displayName: 'Sesión gratuita OdlC', defaultDuration: 'PT30M', description: 'Primera conversación de 30 minutos.' }] });
     if (u.pathname.endsWith('/staffMembers')) return send(200, { value: [{ id: 'ST1', emailAddress: 'isabel@odlc.es' }] });
     if (u.pathname.endsWith('/appointments') && req.method === 'POST') { const d = JSON.parse(b); globalThis.lastAppt = d; return send(201, { id: 'AP1', joinWebUrl: 'https://teams.microsoft.com/l/meetup-join/BOOKINGSAPPT' }); }
-    if (u.pathname.endsWith('/appointments/AP1/cancel')) return send(204);
+    if (u.pathname.endsWith('/appointments/AP1/cancel')) { globalThis.apCancel = (globalThis.apCancel || 0) + 1; return send(204); }
+    if (u.pathname.endsWith('/appointments/AP1') && req.method === 'PATCH') { globalThis.lastPatch = JSON.parse(b); return send(200, {}); }
+    if (u.pathname === '/last-patch') return send(200, { patch: globalThis.lastPatch || null, cancels: globalThis.apCancel || 0 });
     if (u.pathname === '/last-appt') return send(200, globalThis.lastAppt || {});
     const m = u.pathname.match(/^\/v1\.0\/me\/events\/([^/]+)(\/cancel)?$/);
     if (m) {
