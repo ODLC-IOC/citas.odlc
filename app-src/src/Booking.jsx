@@ -24,7 +24,13 @@ export default function Booking() {
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => { api('/reservas').then(setInfo).catch((e) => setMsg(e.message)); }, []);
+  // ?tipo=sesion o ?tipo=diagnostico (botones de odlc.es): entra directamente en ese tipo de cita
+  useEffect(() => { api('/reservas').then((d) => {
+    setInfo(d);
+    const want = new URLSearchParams(location.search).get('tipo');
+    const t = want && (d.tipos || []).find((x) => x.id === want || (want === 'sesion' && /gratuit/i.test(x.nombre)) || (want === 'diagnostico' && /diagn/i.test(x.nombre)));
+    if (t) chooseType(t);
+  }).catch((e) => setMsg(e.message)); }, []);
 
   function chooseType(t) {
     setTipo(t); setSlots(null); setDay(''); setHour(''); setStep(2); setMsg('');
