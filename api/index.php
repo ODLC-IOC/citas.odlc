@@ -9,6 +9,7 @@ require __DIR__ . '/_lib/booking.php';
 $method = $_SERVER['REQUEST_METHOD'];
 $path = '/' . trim((string)($_GET['r'] ?? ''), '/');
 
+header('Cache-Control: no-store'); // ninguna respuesta de la API (ni las redirecciones de entrada) se guarda en la caché de Hostinger
 try {
     // ===== Público =====
     if ($path === '/estado' && $method === 'GET') send_json(['ok' => true]);

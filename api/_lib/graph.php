@@ -107,7 +107,9 @@ function ms_status(): array {
     if (!$t) return ['configured' => true, 'connected' => false];
     return ['configured' => true, 'connected' => true, 'account' => $t['account'], 'teams' => $t['teams'], 'providers' => $t['providers']];
 }
-function ms_ready(): bool { $s = ms_status(); return !empty($s['connected']) && !empty($s['teams']); }
+// Algunas cuentas no informan de Teams en el calendario aunque lo tengan: basta con estar conectada.
+// Si Microsoft no devuelve el enlace al crear la reunión, se avisa y se borra el evento.
+function ms_ready(): bool { $s = ms_status(); return !empty($s['connected']); }
 
 function access_token(): string {
     static $cached = null;
@@ -154,7 +156,7 @@ function create_teams_event(array $m, bool $invite): array {
     $ev = graph('POST', '/me/events', event_payload($m, $invite) + ['isOnlineMeeting' => true, 'onlineMeetingProvider' => 'teamsForBusiness', 'transactionId' => $m['id']]);
     $join = $ev['onlineMeeting']['joinUrl'] ?? '';
     for ($i = 0; !$join && $i < 4; $i++) { usleep(1200000); $a = graph('GET', '/me/events/' . rawurlencode($ev['id']) . '?$select=onlineMeeting'); $join = $a['onlineMeeting']['joinUrl'] ?? ''; }
-    if (!$join) throw new GraphError('Outlook ha creado el evento, pero Microsoft no ha devuelto el enlace de Teams. Revisa que tu cuenta permite reuniones de Teams o usa el modo manual.');
+    if (!$join) { graph_code('DELETE', '/me/events/' . rawurlencode($ev['id'])); throw new GraphError('Microsoft no ha devuelto el enlace de Teams (no se ha dejado ningún evento en tu calendario). Revisa que tu cuenta tiene Teams o usa el modo manual.'); }
     return ['eventId' => $ev['id'], 'joinUrl' => $join];
 }
 function update_teams_event(array $m, bool $invite): void { graph('PATCH', '/me/events/' . rawurlencode($m['graphEventId']), event_payload($m, $invite)); }

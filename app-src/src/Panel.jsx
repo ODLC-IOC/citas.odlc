@@ -61,7 +61,7 @@ function Dashboard({ user, onLogout }) {
     api('/ms/estado').then((s) => { setMs(s); if (s.connected && s.teams) loadEvents(); }).catch(() => setMs({ error: true }));
     loadList();
   }, []);
-  const autoOk = ms && ms.connected && ms.teams;
+  const autoOk = ms && ms.connected;
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
 
   function reset() { setForm(EMPTY); setEditing(null); setFields({}); setFiles([]); setLink({ url: '', name: '' }); if (fileRef.current) fileRef.current.value = ''; }
@@ -145,7 +145,7 @@ function Dashboard({ user, onLogout }) {
   if (ms && ms.error) msText = 'No se ha podido comprobar la conexión.';
   else if (ms && !ms.configured) msText = 'Modo automático no configurado todavía (faltan las claves de Microsoft Entra ID). El modo manual funciona.';
   else if (ms && !ms.connected) msText = 'Sin conectar. Conecta ' + ms.adminEmail + ' para crear reuniones de Teams, ver tus citas de Outlook y Bookings y abrir la página de reservas.';
-  else if (ms && !ms.teams) msText = 'Conectado como ' + ms.account + ', pero tu calendario no admite Teams. Usa el modo manual.';
+  
   else if (ms) msText = 'Conectado como ' + ms.account + '. Outlook, Teams y reservas en citas.odlc.es activos.';
 
   return (
