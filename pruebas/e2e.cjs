@@ -30,7 +30,7 @@ const ok = (c, m) => { console.log((c ? '✔ ' : '✘ ') + m); if (!c) process.e
   // Conectar Microsoft (simulado): /api/ms/conectar redirige a Microsoft con state + PKCE
   const r = await p.request.get(B + '/api/ms/conectar', { maxRedirects: 0 });
   const loc = new URL(r.headers()['location']); ok(loc.searchParams.get('code_challenge_method') === 'S256' && loc.searchParams.get('scope') === 'openid offline_access User.Read Calendars.ReadWrite BookingsAppointment.ReadWrite.All', 'Autorización OAuth con PKCE y permisos mínimos');
-  await p.goto(B + '/api/ms/callback?code=C&state=' + loc.searchParams.get('state')); await p.waitForURL((u) => u.pathname === '/'); await p.waitForSelector('text=Citas de Outlook y Bookings');
+  await p.goto(B + '/api/ms/callback?code=C&state=' + loc.searchParams.get('state')); await p.waitForURL((u) => u.pathname === '/'); await p.waitForSelector('.p-item-ev');
   ok((await p.textContent('.p-box')).includes('Conectado como isabel@odlc.es'), 'Microsoft 365 conectado');
   await p.waitForTimeout(1200);
   // Bookings importada sola; la de notaría queda pendiente

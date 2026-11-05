@@ -60,7 +60,7 @@ function Dashboard({ user, onLogout }) {
   const loadEvents = () => api('/outlook/eventos').then((d) => { setEvents(d.events); if (d.importadas) loadList(); }).catch((e) => setEvents({ error: e.message }));
   useEffect(() => {
     if (qs.get('ms') || qs.get('acceso')) history.replaceState(null, '', '/');
-    api('/ms/estado').then((s) => { setMs(s); if (s.connected) { loadEvents(); api('/bookings').then(setBk).catch(() => {}); } }).catch(() => setMs({ error: true }));
+    api('/ms/estado').then((s) => { setMs(s); if (s.connected && s.teams) setForm((f) => (f.mode === 'manual' && !f.teamsUrl ? { ...f, mode: 'auto' } : f)); if (s.connected) { loadEvents(); api('/bookings').then(setBk).catch(() => {}); } }).catch(() => setMs({ error: true }));
     loadList();
   }, []);
   const autoOk = ms && ms.connected;
@@ -68,7 +68,7 @@ function Dashboard({ user, onLogout }) {
   const setGuest = (i, k) => (e) => setForm({ ...form, guests: form.guests.map((g, j) => (j === i ? { ...g, [k]: e.target.value } : g)) });
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
 
-  function reset() { setForm(EMPTY); setEditing(null); setFields({}); setFiles([]); setLink({ url: '', name: '' }); if (fileRef.current) fileRef.current.value = ''; }
+  function reset() { setForm(ms && ms.teams ? { ...EMPTY, mode: 'auto' } : EMPTY); setEditing(null); setFields({}); setFiles([]); setLink({ url: '', name: '' }); if (fileRef.current) fileRef.current.value = ''; }
   function edit(m) {
     setEditing(m); setFields({}); setFiles([]); setFormMsg(['', '']);
     setForm({ mode: m.mode, guests: m.guests && m.guests.length ? m.guests.map((g) => ({ ...NOGUEST, ...g })) : [NOGUEST], team: (m.team || [ME]).join('\n'), subject: m.subject,
@@ -157,9 +157,14 @@ function Dashboard({ user, onLogout }) {
   }
   async function doCopy(text, key) { const ok = await copy(text); if (key) setRowMsg({ [key]: ok ? 'Copiado.' : 'No se ha podido copiar.' }); else setResMsg([ok ? 'Copiado.' : 'No se ha podido copiar.', ok ? 'ok' : 'err']); }
 
-  const items = meetings.filter((m) => filter === 'todas' || m.estado === filter).sort((a, b) => (filter === 'proxima' ? a.startUtc - b.startUtc : b.startUtc - a.startUtc));
-  const modeNow = editing ? editing.mode : form.mode;
   const pending = Array.isArray(events) ? events.filter((e) => !e.meetingId) : [];
+  const items = meetings.filter((m) => filter === 'todas' || m.estado === filter).sort((a, b) => (filter === 'proxima' ? a.startUtc - b.startUtc : b.startUtc - a.startUtc));
+  // Una sola lista: reuniones con invitación y citas de Outlook/Bookings aún sin invitación, agrupadas por día
+  const rows = [...items.map((m) => ({ kind: 'm', at: m.startUtc, day: m.fecha, m })),
+    ...(filter === 'proxima' || filter === 'todas' ? pending.map((ev) => ({ kind: 'ev', at: ev.startUtc, day: ev.fecha, ev })) : [])]
+    .sort((a, b) => (filter === 'proxima' ? a.at - b.at : b.at - a.at));
+  const days = []; rows.forEach((r) => { const last = days[days.length - 1]; if (last && last[0] === r.day) last[1].push(r); else days.push([r.day, [r]]); });
+  const modeNow = editing ? editing.mode : form.mode;
 
   let msText = 'Comprobando…';
   if (ms && ms.error) msText = 'No se ha podido comprobar la conexión.';
@@ -181,20 +186,39 @@ function Dashboard({ user, onLogout }) {
 
         {autoOk && user.admin && <BookingsBox />}
 
-        {autoOk && (
-          <section className="p-box"><h2>Citas de Outlook y Bookings</h2>
-            <p className="p-muted">Reuniones de Teams de tu calendario (próximos 60 días). Las reservas de Bookings se convierten solas; para las demás, pulsa «Crear invitación»: se genera la página y su enlace se añade dentro del evento de tu Outlook.</p>
-            {events === null && <p className="p-muted">Cargando…</p>}
-            {events && events.error && <p className="p-msg err">{events.error}</p>}
-            {Array.isArray(events) && !pending.length && <p className="p-muted">No hay citas pendientes de invitación.</p>}
-            {pending.map((ev) => (
-              <article className="p-item" key={ev.eventId}>
-                <h3>{ev.guestName || ev.guestEmail || 'Sin invitado'}{ev.bookings && <span className="p-badge proxima">Bookings</span>}</h3>
-                <p>{ev.subject}</p><p>{ev.fecha} · {ev.hora}–{ev.horaFin} h</p>
-                <div className="p-actions"><button className="p-btn" type="button" onClick={() => importEvent(ev)}>Crear invitación</button></div>
-                {rowMsg[ev.eventId] && <p className="p-msg err">{rowMsg[ev.eventId]}</p>}
-              </article>))}
-          </section>)}
+
+        <section className="p-box"><h2>Mis reuniones</h2>
+          <div className="p-tabs" role="group" aria-label="Filtrar">{[['proxima', 'Próximas'], ['pasada', 'Pasadas'], ['cancelada', 'Canceladas'], ['todas', 'Todas']].map(([k, l]) =>
+            <button key={k} type="button" aria-pressed={filter === k} onClick={() => setFilter(k)}>{l}</button>)}</div>
+          {events && events.error && <p className="p-msg err">Outlook: {events.error}</p>}
+          {!rows.length && <p className="p-muted">No hay reuniones en esta lista.</p>}
+          {days.map(([day, list]) => (
+            <div className="p-day" key={day}><h3 className="p-day-t">{day}</h3>
+              {list.map((r) => r.kind === 'ev' ? (
+                <article className="p-item p-item-ev" key={r.ev.eventId}>
+                  <h3>{r.ev.guestName || r.ev.guestEmail || 'Sin invitado'}<span className="p-badge proxima">{r.ev.bookings ? 'Bookings' : 'Outlook'} · sin invitación</span></h3>
+                  <p>{r.ev.subject}</p><p>{r.ev.hora}–{r.ev.horaFin} h (Madrid)</p>
+                  <div className="p-actions"><button className="p-btn" type="button" onClick={() => importEvent(r.ev)}>Crear invitación</button></div>
+                  {rowMsg[r.ev.eventId] && <p className="p-msg err">{rowMsg[r.ev.eventId]}</p>}
+                </article>) : (() => { const m = r.m; return (
+                <article className="p-item" key={m.id}>
+                  <h3>{m.guestName || 'Sin nombre de invitado'}<span className={'p-badge ' + m.estado}>{LABEL[m.estado]}</span></h3>
+                  <p>{m.subject}</p>
+                  <p>{m.hora}–{m.horaFin} h (Madrid) · {m.duration} min{ORIGEN[m.source] || ''}</p>
+                  {m.notes && <p>Notas: {m.notes}</p>}
+                  {m.materials && m.materials.length > 0 && <p>Materiales: {m.materials.map((f) => f.name).join(', ')}</p>}
+                  <div className="p-actions">
+                    <a className="p-btn ghost" href={m.url} target="_blank" rel="noopener">Abrir invitación</a>
+                    <button className="p-btn ghost" type="button" onClick={() => doCopy(m.url, m.id)}>Copiar enlace</button>
+                    {m.estado !== 'cancelada' && <>
+                      <button className="p-btn wa" type="button" onClick={() => show(m, false)}>WhatsApp</button>
+                      <button className="p-btn ghost" type="button" onClick={() => edit(m)}>Editar</button>
+                      <button className="p-btn danger" type="button" onClick={() => cancel(m)}>{armed === m.id ? '¿Seguro? Sí, cancelar' : 'Cancelar'}</button></>}
+                  </div>
+                  {rowMsg[m.id] && <p className="p-msg">{rowMsg[m.id]}</p>}
+                </article>); })())}
+            </div>))}
+        </section>
 
         <section className="p-box" ref={formRef}>
           <h1>{editing ? 'Editar reunión' : 'Nueva reunión'}</h1>
@@ -265,28 +289,6 @@ function Dashboard({ user, onLogout }) {
             <p className={'p-msg ' + resMsg[1]} role="status">{resMsg[0]}</p>
           </section>)}
 
-        <section className="p-box"><h2>Mis reuniones</h2>
-          <div className="p-tabs" role="group" aria-label="Filtrar">{[['proxima', 'Próximas'], ['pasada', 'Pasadas'], ['cancelada', 'Canceladas'], ['todas', 'Todas']].map(([k, l]) =>
-            <button key={k} type="button" aria-pressed={filter === k} onClick={() => setFilter(k)}>{l}</button>)}</div>
-          {!items.length && <p className="p-muted">No hay reuniones en esta lista.</p>}
-          {items.map((m) => (
-            <article className="p-item" key={m.id}>
-              <h3>{m.guestName || 'Sin nombre de invitado'}<span className={'p-badge ' + m.estado}>{LABEL[m.estado]}</span></h3>
-              <p>{m.subject}</p>
-              <p>{m.fecha} · {m.hora}–{m.horaFin} h (Madrid) · {m.duration} min{ORIGEN[m.source] || ''}</p>
-              {m.notes && <p>Notas: {m.notes}</p>}
-              {m.materials && m.materials.length > 0 && <p>Materiales: {m.materials.map((f) => f.name).join(', ')}</p>}
-              <div className="p-actions">
-                <a className="p-btn ghost" href={m.url} target="_blank" rel="noopener">Abrir invitación</a>
-                <button className="p-btn ghost" type="button" onClick={() => doCopy(m.url, m.id)}>Copiar enlace</button>
-                {m.estado !== 'cancelada' && <>
-                  <button className="p-btn wa" type="button" onClick={() => show(m, false)}>WhatsApp</button>
-                  <button className="p-btn ghost" type="button" onClick={() => edit(m)}>Editar</button>
-                  <button className="p-btn danger" type="button" onClick={() => cancel(m)}>{armed === m.id ? '¿Seguro? Sí, cancelar' : 'Cancelar'}</button></>}
-              </div>
-              {rowMsg[m.id] && <p className="p-msg">{rowMsg[m.id]}</p>}
-            </article>))}
-        </section>
         {user.admin && <Users />}
       </main></div>);
 }

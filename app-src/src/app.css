@@ -47,3 +47,8 @@
 .p-guest-del { background: none; border: 0; color: #9B3127; font: inherit; font-size: .85rem; cursor: pointer; padding: 6px 4px; }
 .p-guest-add { margin-top: 10px; align-self: flex-start; }
 @media (max-width: 720px) { .p-guest { grid-template-columns: 1fr; } .p-guest-del { justify-self: start; } }
+
+/* Reuniones agrupadas por día */
+.p-day { margin-top: 18px; }
+.p-day-t { font-family: var(--serif, Lora, Georgia, serif); font-weight: 400; font-size: 1.15rem; color: #17302A; margin: 0 0 4px; padding-bottom: 6px; border-bottom: 2px solid #A8843F; }
+.p-item-ev { border-left: 3px dashed #A8843F; padding-left: 12px; }

@@ -109,6 +109,16 @@ function ms_status(): array {
 }
 // Algunas cuentas no informan de Teams en el calendario aunque lo tengan: basta con estar conectada.
 // Si Microsoft no devuelve el enlace al crear la reunión, se avisa y se borra el evento.
+// Vuelve a mirar si el calendario ya admite Teams (p. ej. tras comprar Teams Essentials), como mucho cada 10 minutos
+function ms_recheck_teams(): void {
+    $t = get_json('ms/token');
+    if (!$t || !empty($t['teams']) || (($t['checkedAt'] ?? 0) > time() - 600)) return;
+    try { $cal = graph('GET', '/me/calendar?$select=allowedOnlineMeetingProviders'); $prov = $cal['allowedOnlineMeetingProviders'] ?? []; }
+    catch (Throwable $e) { return; }
+    $t = get_json('ms/token') ?? $t;
+    $t['providers'] = $prov; $t['teams'] = in_array('teamsForBusiness', $prov, true); $t['checkedAt'] = time();
+    set_json('ms/token', $t);
+}
 function ms_ready(): bool { $s = ms_status(); return !empty($s['connected']); }
 
 function access_token(): string {

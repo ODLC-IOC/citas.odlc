@@ -115,7 +115,7 @@ try {
         $all = users(); unset($all[$email]); save_users($all);
         send_json(['usuarios' => array_values(users())]);
     }
-    if ($path === '/ms/estado') send_json(ms_status() + ['adminEmail' => admin_email(), 'autoBookings' => (bool)cfg('auto_bookings', true)]);
+    if ($path === '/ms/estado') { ms_recheck_teams(); send_json(ms_status() + ['adminEmail' => admin_email(), 'autoBookings' => (bool)cfg('auto_bookings', true)]); }
     if ($path === '/ms/conectar' && $method === 'GET') {
         if (empty($user['admin'])) { header('Location: /', true, 303); exit; }
         if (ms_missing()) { header('Location: /?ms=error&detalle=' . rawurlencode('Faltan las claves de Microsoft Entra ID.')); exit; }
