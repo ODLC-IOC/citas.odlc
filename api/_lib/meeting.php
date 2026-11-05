@@ -112,7 +112,7 @@ function card_url(): string { return ODLC_WEB . '/vcard_ioc'; }
 
 // Ficha HTML de la reunión para el evento de Outlook y el .ics (tablas y estilos en línea: así se ve bien en Outlook)
 function event_html(array $m): string {
-    $v = public_view($m); $inv = invite_url($m); $img = $inv . '/imagen-' . (int)($m['sequence'] ?? 0) . '.jpg';
+    $v = public_view($m); $inv = invite_url($m); $img = $inv . '/vista-' . (int)($m['sequence'] ?? 0) . '.jpg';
     $f = 'font-family:Poppins,Segoe UI,Arial,sans-serif;';
     $row = fn(string $k, string $val) => '<tr><td style="' . $f . 'padding:9px 14px;font-size:11px;letter-spacing:2px;color:#A8843F;text-transform:uppercase;white-space:nowrap;border-bottom:1px solid #ECE8DF;vertical-align:top">' . esc($k) . '</td>'
         . '<td style="' . $f . 'padding:9px 14px;font-size:15px;color:#17302A;border-bottom:1px solid #ECE8DF">' . $val . '</td></tr>';
@@ -161,7 +161,7 @@ function calendar_html(array $m): string {
     $names = array_values(array_filter(array_column(guests_of($m), 'name')));
     $teams = (string)($m['teamsUrl'] ?? '');
     $l = [
-        '<a href="' . esc($inv) . '"><img src="' . esc($inv . '/imagen-' . (int)($m['sequence'] ?? 0) . '.jpg') . '" width="520" alt="OdlC · Invitación a reunión"></a>',
+        '<a href="' . esc($inv) . '"><img src="' . esc($inv . '/vista-' . (int)($m['sequence'] ?? 0) . '.jpg') . '" width="520" alt="OdlC · Invitación a reunión"></a>',
         '<b>' . esc($v['subject']) . '</b>',
         '<b>Fecha:</b> ' . esc($v['dia'] . ', ' . $v['fecha']) . '<br><b>Hora:</b> ' . esc($v['hora']) . '–' . esc($v['horaFin']) . ' h (Madrid, ' . esc($v['zona']) . ')<br><b>Duración:</b> ' . esc((string)$v['duration']) . ' min · Microsoft Teams',
         '<b>OdlC:</b> ' . esc(implode(', ', $v['team'])) . ($names ? '<br><b>' . (count($names) > 1 ? 'Invitados' : 'Invitado') . ':</b> ' . esc(join_names($names)) : ''),

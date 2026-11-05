@@ -18,7 +18,7 @@ RewriteRule ^api/(index|r)\.php$ - [L]
 RewriteRule ^api/(.*)$ api/index.php?r=$1 [QSA,L]
 # Invitaciones, su .ics y sus materiales
 RewriteRule ^r/([A-Za-z0-9_-]{22})/?$ api/r.php?id=$1 [QSA,L]
-RewriteRule ^r/([A-Za-z0-9_-]{22})/(calendario\.ics|imagen(?:-\d+c?)?\.jpg|material/[A-Za-z0-9_-]{16})$ api/r.php?id=$1&x=$2 [QSA,L]
+RewriteRule ^r/([A-Za-z0-9_-]{22})/(calendario\.ics|(?:imagen|vista)(?:-\d+c?)?\.jpg|material/[A-Za-z0-9_-]{16})$ api/r.php?id=$1&x=$2 [QSA,L]
 # Rutas de la app (React)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

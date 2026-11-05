@@ -59,7 +59,7 @@ const ok = (c, m) => { console.log((c ? '✔ ' : '✘ ') + m); if (!c) process.e
     ok(r.status() === 201 && (ev.attendees || []).length === 2 && JSON.stringify(ev.body || {}).includes('teams.live.com') && !ev.isOnlineMeeting, 'Enlace manual: evento en Outlook (bloquea agenda) y convocatoria por correo a los dos'); }
   // Invitación pública en móvil
   const m = await b.newContext({ ...devices['iPhone 13'], acceptDownloads: true }); const q = await m.newPage(); q.on('pageerror', (e) => errs.push(e.message));
-  const raw = await (await q.request.get(url)).text(); ok(raw.includes('og:image') && raw.includes('Invitación a reunión · OdlC') && !raw.includes('María') && /imagen-\d+\.jpg/.test(raw), 'Open Graph en el HTML sin datos privados');
+  const raw = await (await q.request.get(url)).text(); ok(raw.includes('og:image') && raw.includes('Invitación a reunión · OdlC') && !raw.includes('María') && /vista-\d+\.jpg/.test(raw), 'Open Graph en el HTML sin datos privados');
   { const r = await q.request.get(url + '/imagen.jpg'); const buf = await r.body(); ok(r.headers()['content-type'] === 'image/jpeg' && buf.length > 20000 && buf.length < 300000, 'Imagen propia de la reunión para WhatsApp (' + Math.round(buf.length / 1024) + ' KB)'); require('fs').writeFileSync(S + '/shots/og.jpg', buf); }
   await q.goto(url); await q.waitForSelector('.r-grid');
   const t = await q.textContent('main'); ok(['Revisión del pacto', 'Isabel Olivares de la Cerda · Ana Pérez', 'para María y Juan', '20 nov 2026', '11:00 h', 'UTC+1', 'Borrador del pacto', 'orden.pdf', 'Unirse a la reunión'].every((s) => t.includes(s)), 'Invitación con datos, asistentes y materiales');

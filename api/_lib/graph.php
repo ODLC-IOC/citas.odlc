@@ -139,7 +139,7 @@ function graph_code(string $method, string $path, ?array $body = null): int {
 function local_iso(int $ms): string { return dt($ms)->format('Y-m-d\TH:i:s'); }
 function links_html(array $m): string {
     // La imagen de la invitación (enlazada) y debajo el enlace, como en la vista previa de WhatsApp
-    return '<p><a href="' . esc(invite_url($m)) . '"><img src="' . esc(invite_url($m) . '/imagen-' . (int)($m['sequence'] ?? 0) . '.jpg') . '" width="480" alt="OdlC · Invitación a reunión" style="display:block;width:480px;max-width:100%;height:auto;border:0;border-radius:8px"></a></p>'
+    return '<p><a href="' . esc(invite_url($m)) . '"><img src="' . esc(invite_url($m) . '/vista-' . (int)($m['sequence'] ?? 0) . '.jpg') . '" width="480" alt="OdlC · Invitación a reunión" style="display:block;width:480px;max-width:100%;height:auto;border:0;border-radius:8px"></a></p>'
         . '<p style="font-family:Arial,sans-serif;font-size:14px;color:#17302A"><a href="' . esc(invite_url($m)) . '">' . esc(invite_url($m)) . '</a><br>'
         . 'Invitación, materiales y calendario · <a href="' . esc(card_url()) . '">Tarjeta de contacto de ' . esc(ODLC_NOMBRE) . '</a></p>'
         . (($m['mode'] ?? '') !== 'auto' && !empty($m['teamsUrl']) ? '<p style="font-family:Arial,sans-serif;font-size:15px"><b><a href="' . esc($m['teamsUrl']) . '">Unirse a la reunión de Microsoft Teams</a></b></p>' : '') . '<hr>';
