@@ -5,7 +5,7 @@ import { parseOutlookIcs, teamsFrom } from './ics.js';
 
 const ME = 'Isabel Olivares de la Cerda';
 const NOGUEST = { name: '', email: '', phone: '' };
-const EMPTY = { mode: 'manual', guests: [NOGUEST], team: ME, subject: '', date: '', time: '', duration: '60', teamsUrl: '', description: '', notes: '', sendInvite: false, toOutlook: true };
+const EMPTY = { mode: 'manual', guests: [NOGUEST], team: ME, subject: '', date: '', time: '', duration: '60', teamsUrl: '', description: '', notes: '', sendInvite: false, toOutlook: true, toBookings: true, bkService: '' };
 const LABEL = { proxima: 'Próxima', pasada: 'Pasada', cancelada: 'Cancelada' };
 const ORIGEN = { panel: '', reserva: ' · Reserva web', bookings: ' · Bookings', outlook: ' · Outlook' };
 const fmtSize = (b) => (b < 1048576 ? Math.max(1, Math.round(b / 1024)) + ' KB' : (b / 1048576).toFixed(1).replace('.', ',') + ' MB');
@@ -51,6 +51,7 @@ function Dashboard({ user, onLogout }) {
   const [resMsg, setResMsg] = useState(['', '']);
   const [rowMsg, setRowMsg] = useState({});
   const [armed, setArmed] = useState('');
+  const [bk, setBk] = useState(null);
   const formRef = useRef(null); const resRef = useRef(null); const fileRef = useRef(null);
   const qs = new URLSearchParams(location.search);
   const [msNote] = useState(qs.get('acceso') === 'error' ? 'No se ha podido conectar: ' + (qs.get('detalle') || '') : '');
@@ -59,10 +60,11 @@ function Dashboard({ user, onLogout }) {
   const loadEvents = () => api('/outlook/eventos').then((d) => { setEvents(d.events); if (d.importadas) loadList(); }).catch((e) => setEvents({ error: e.message }));
   useEffect(() => {
     if (qs.get('ms') || qs.get('acceso')) history.replaceState(null, '', '/');
-    api('/ms/estado').then((s) => { setMs(s); if (s.connected && s.teams) loadEvents(); }).catch(() => setMs({ error: true }));
+    api('/ms/estado').then((s) => { setMs(s); if (s.connected) { loadEvents(); api('/bookings').then(setBk).catch(() => {}); } }).catch(() => setMs({ error: true }));
     loadList();
   }, []);
   const autoOk = ms && ms.connected;
+  const bkOn = !!(autoOk && bk && bk.elegido && bk.servicios && bk.servicios.length);
   const setGuest = (i, k) => (e) => setForm({ ...form, guests: form.guests.map((g, j) => (j === i ? { ...g, [k]: e.target.value } : g)) });
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
 
@@ -94,7 +96,7 @@ function Dashboard({ user, onLogout }) {
 
   async function submit(e) {
     e.preventDefault(); setFields({});
-    const p = { ...form, duration: Number(form.duration) }; const f = {};
+    const p = { ...form, duration: Number(form.duration), toBookings: bkOn && form.toBookings, bkService: form.bkService || (bkOn ? bk.servicios[0].id : '') }; const f = {};
     if (!p.subject.trim()) f.subject = 'Escribe el asunto.';
     if (!p.date) f.date = 'Elige una fecha.';
     if (!p.time) f.time = 'Elige una hora.';
@@ -227,8 +229,10 @@ function Dashboard({ user, onLogout }) {
               <Field id="duration" label="Duración *" err={fields.duration}><select id="duration" value={form.duration} onChange={set('duration')}>{[15, 30, 45, 60, 90].map((d) => <option key={d} value={d}>{d} minutos</option>)}</select></Field>
               {modeNow === 'manual' && <Field full id="teamsUrl" label="Enlace de Microsoft Teams *" help="Puedes pegar el texto entero de la invitación de Teams: se extrae el enlace solo." err={fields.teamsUrl}>
                 <input id="teamsUrl" type="url" value={form.teamsUrl} placeholder="https://teams.microsoft.com/l/meetup-join/…" onChange={(e) => setForm({ ...form, teamsUrl: teamsFrom(e.target.value) || e.target.value })} /></Field>}
-              {modeNow === 'manual' && autoOk && !(editing && editing.graphEventId) && <div className="p-field full"><label><input type="checkbox" checked={form.toOutlook} onChange={set('toOutlook')} style={{ width: 'auto', marginRight: 8 }} />Crear también el evento en mi Outlook con este enlace (me bloquea la agenda y Bookings)</label></div>}
-              {(modeNow !== 'manual' || (autoOk && form.toOutlook) || (editing && editing.graphEventId)) && <div className="p-field full"><label><input type="checkbox" checked={form.sendInvite} onChange={set('sendInvite')} style={{ width: 'auto', marginRight: 8 }} />Enviar la convocatoria por correo (Outlook) a los invitados</label></div>}
+              {bkOn && !editing && <div className="p-field full"><label><input type="checkbox" checked={form.toBookings} onChange={set('toBookings')} style={{ width: 'auto', marginRight: 8 }} />Registrar en mi Microsoft Bookings (me bloquea la agenda y Bookings envía la confirmación por correo a cada invitado)</label>
+                {form.toBookings && bk.servicios.length > 1 && <select aria-label="Servicio de Bookings" value={form.bkService} onChange={set('bkService')} style={{ marginTop: 8 }}>{bk.servicios.map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}</select>}</div>}
+              {modeNow === 'manual' && autoOk && !(bkOn && form.toBookings && !editing) && !(editing && editing.graphEventId) && <div className="p-field full"><label><input type="checkbox" checked={form.toOutlook} onChange={set('toOutlook')} style={{ width: 'auto', marginRight: 8 }} />Crear también el evento en mi Outlook con este enlace (me bloquea la agenda y Bookings)</label></div>}
+              {!(bkOn && form.toBookings && !editing) && (modeNow !== 'manual' || (autoOk && form.toOutlook) || (editing && editing.graphEventId)) && <div className="p-field full"><label><input type="checkbox" checked={form.sendInvite} onChange={set('sendInvite')} style={{ width: 'auto', marginRight: 8 }} />Enviar la convocatoria por correo (Outlook) a los invitados</label></div>}
               <Field full id="description" label="Descripción para el invitado" help="Aparece en la invitación y en su calendario. No escribas información confidencial."><textarea id="description" value={form.description} onChange={set('description')} maxLength={2000} /></Field>
               <div className="p-field full"><label htmlFor="files">Materiales para la reunión</label>
                 <input id="files" ref={fileRef} type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.txt,.csv" onChange={(e) => setFiles(Array.from(e.target.files))} />

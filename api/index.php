@@ -162,7 +162,19 @@ try {
         $now = time() * 1000; $id = new_id();
         $m = $v['data'] + ['id' => $id, 'uid' => "$id@odlc.es", 'mode' => $mode, 'source' => 'panel', 'tz' => ODLC_TZ, 'status' => 'programada', 'sequence' => 0,
             'createdAt' => $now, 'updatedAt' => $now, 'sendInvite' => $invite, 'materials' => []];
-        if ($mode === 'auto') { $ev = create_teams_event($m, $invite); $m['teamsUrl'] = $ev['joinUrl']; $m['graphEventId'] = $ev['eventId']; }
+        // Registrar en Microsoft Bookings (bloquea la agenda en Bookings y Outlook y envía la confirmación por correo a cada invitado)
+        $biz = bk_business(); $sv = null;
+        if (!empty($b['toBookings']) && $biz && ms_ready()) {
+            foreach (bk_services($biz) as $x) if ($x['id'] === (string)($b['bkService'] ?? '')) $sv = $x;
+            $sv = $sv ?? (bk_services($biz)[0] ?? null);
+            if (!$sv) send_json(['error' => 'Tu página de Bookings no tiene ningún servicio visible.'], 422);
+        }
+        if ($sv) {
+            $ap = bk_create($biz, $sv, $m, '', $mode === 'auto');
+            $m['bookingAppointmentId'] = $ap['appointmentId']; $m['bookingsBusiness'] = $biz; $m['source'] = 'panel';
+            if ($mode === 'auto') { if ($ap['joinUrl'] === '') { bk_cancel($biz, $ap['appointmentId']); send_json(['error' => 'Bookings no ha devuelto el enlace de Teams. Pega tú el enlace (modo manual) y vuelve a intentarlo.'], 502); } $m['teamsUrl'] = $ap['joinUrl']; }
+        }
+        elseif ($mode === 'auto') { $ev = create_teams_event($m, $invite); $m['teamsUrl'] = $ev['joinUrl']; $m['graphEventId'] = $ev['eventId']; }
         elseif ($toOutlook) { $m['graphEventId'] = create_outlook_event($m, $invite); }
         set_json("m/$id", $m);
         send_json(['meeting' => admin_view($m)], 201);

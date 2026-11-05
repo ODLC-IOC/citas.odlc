@@ -145,7 +145,10 @@ function calendar_body(array $m): string {
 
 // Versión corta en HTML para los enlaces «Añadir a Outlook / Google» (van dentro de la URL: sin estilos largos)
 function calendar_html(array $m): string {
-    $v = public_view($m); $inv = invite_url($m);
+    // Sin public_view(): esta función la usa public_view() a través de calendar_links()
+    $v = ['subject' => $m['subject'], 'dia' => dia_semana($m['startUtc']), 'fecha' => fecha_corta($m['startUtc']), 'hora' => hora_corta($m['startUtc']), 'horaFin' => hora_corta($m['endUtc']),
+          'zona' => utc_offset($m['startUtc']), 'duration' => $m['duration'], 'team' => team_of($m), 'description' => $m['description'] ?? ''];
+    $inv = invite_url($m);
     $names = array_values(array_filter(array_column(guests_of($m), 'name')));
     $teams = (string)($m['teamsUrl'] ?? '');
     $l = [

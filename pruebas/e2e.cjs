@@ -48,7 +48,7 @@ const ok = (c, m) => { console.log((c ? '✔ ' : '✘ ') + m); if (!c) process.e
   await p.setInputFiles('#files', S + '/orden.pdf'); await p.fill('.p-linkrow input[type=url]', 'https://odlcsl-my.sharepoint.com/:w:/g/x'); await p.fill('.p-linkrow input:not([type])', 'Borrador del pacto');
   await p.click('form button.p-btn:not(.ghost)'); await p.waitForSelector('text=Invitación creada.'); await p.waitForTimeout(500);
   const wa = await p.inputValue('#wa'); ok(wa.includes('Hola, María y Juan:') && wa.includes('Os envío') && wa.includes('🕚 11:00 h (Madrid)') && wa.includes('/r/'), 'Mensaje de WhatsApp generado');
-  const url = await p.getAttribute('.p-result a[href*="/r/"]', 'href');
+  const url = await p.getAttribute('.p-result a[target=_blank][href*="/r/"]', 'href');
   { const mm = (await (await p.request.get(B + '/api/reuniones')).json()).meetings.find((x) => x.subject === 'Revisión del pacto');
     const ev = await (await p.request.get(M + '/v1.0/me/events/' + encodeURIComponent(mm.graphEventId))).json();
     ok(mm.guests.length === 2 && (ev.attendees || []).map((a) => a.emailAddress.address).join() === 'maria@cliente.es,juan@cliente.es', 'Dos invitados: los dos reciben la convocatoria de Outlook y Teams'); }
@@ -90,6 +90,9 @@ const ok = (c, m) => { console.log((c ? '✔ ' : '✘ ') + m); if (!c) process.e
   const ap = await (await w.request.get(M + '/last-appt')).json();
   ok(ap.serviceId === 'SV1' && ap.customers[0].emailAddress === 'lucia@empresa.es' && ap.isLocationOnline === true && ap.staffMemberIds[0] === 'ST1', 'Cita creada en Microsoft Bookings con el cliente y Teams');
   ok(await w.getAttribute('a.t-btn', 'href') === 'https://teams.microsoft.com/l/meetup-join/BOOKINGSAPPT', 'La invitación lleva el Teams que genera Bookings');
+  { const r = await p.request.post(B + '/api/reuniones', { headers: { 'Content-Type': 'application/json', Origin: B }, data: { mode: 'manual', toBookings: true, guests: [{ name: 'Alex', email: 'alex@cliente.es' }, { name: 'Marc', email: 'marc@cliente.es' }], subject: 'In&Vest', date: '2026-11-26', time: '11:30', duration: 60, teamsUrl: 'https://teams.live.com/meet/1?p=x', team: 'Isabel Olivares de la Cerda' } });
+    const a2 = await (await p.request.get(M + '/last-appt')).json(); const mm = (await r.json()).meeting;
+    ok(r.status() === 201 && mm.bookingAppointmentId === 'AP1' && a2.customers.length === 2 && a2.isLocationOnline === false && a2.serviceLocation.locationUri.includes('teams.live.com') && !mm.graphEventId, 'Reunión del panel registrada en Bookings con los dos invitados y el enlace pegado'); }
   // Cancelar desde el panel
   await p.reload(); await p.waitForSelector('text=Mis reuniones');
   const item = p.locator('.p-item', { hasText: 'Pedro Ruiz' }); await item.locator('button.danger').click(); await item.locator('button.danger').click(); await p.waitForTimeout(800);

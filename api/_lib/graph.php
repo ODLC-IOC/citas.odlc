@@ -276,16 +276,23 @@ function bk_services(string $biz): array {
     set_json('bk-cache', ['biz' => $biz, 'at' => time(), 'services' => $services]);
     return $services;
 }
-function bk_create(string $biz, array $sv, array $m, string $company): array {
+function bk_create(string $biz, array $sv, array $m, string $company, ?bool $online = null): array {
     $utc = fn(int $ms) => ['dateTime' => gmdate('Y-m-d\TH:i:s', intdiv($ms, 1000)) . '.0000000+00:00', 'timeZone' => 'UTC'];
-    $ap = graph('POST', '/solutions/bookingBusinesses/' . rawurlencode($biz) . '/appointments', [
-        'serviceId' => $sv['id'], 'staffMemberIds' => $sv['staff'] ? [$sv['staff']] : [],
+    $online = $online ?? true;
+    $teams = (string)($m['teamsUrl'] ?? '');
+    // Un cliente de Bookings por invitado con correo (Bookings le envía la confirmación por correo)
+    $customers = [];
+    foreach (guests_of($m) as $g) if ($g['email'] !== '' || !$customers)
+        $customers[] = ['@odata.type' => '#microsoft.graph.bookingCustomerInformation', 'name' => $g['name'] ?: $g['email'], 'emailAddress' => $g['email'],
+            'phone' => $g['phone'], 'notes' => trim(($company ? "Empresa: $company\n" : '') . ($m['description'] ?? '')), 'timeZone' => ODLC_TZ];
+    $body = ['serviceId' => $sv['id'], 'staffMemberIds' => $sv['staff'] ? [$sv['staff']] : [],
         'startDateTime' => $utc($m['startUtc']), 'endDateTime' => $utc($m['endUtc']),
-        'isLocationOnline' => true, 'optOutOfCustomerEmail' => false, 'customerTimeZone' => ODLC_TZ, 'smsNotificationsEnabled' => false,
-        'serviceNotes' => 'Invitación OdlC: ' . invite_url($m),
-        'customers' => [['@odata.type' => '#microsoft.graph.bookingCustomerInformation', 'name' => $m['guestName'], 'emailAddress' => $m['guestEmail'],
-            'phone' => $m['guestPhone'], 'notes' => trim(($company ? "Empresa: $company\n" : '') . ($m['description'] ?? '')), 'timeZone' => ODLC_TZ]],
-    ]);
+        'isLocationOnline' => $online, 'optOutOfCustomerEmail' => false, 'customerTimeZone' => ODLC_TZ, 'smsNotificationsEnabled' => false,
+        'serviceNotes' => 'Invitación OdlC: ' . invite_url($m) . ($teams !== '' && !$online ? "\nUnirse a Teams: $teams" : ''),
+        'customers' => $customers, 'maximumAttendeesCount' => max(1, count($customers)), 'filledAttendeesCount' => count($customers)];
+    // Enlace de Teams pegado a mano: va como lugar de la cita (Bookings no crea otro)
+    if (!$online && $teams !== '') $body['serviceLocation'] = ['displayName' => 'Microsoft Teams', 'locationUri' => $teams, 'locationType' => 'default', 'address' => ['street' => $teams]];
+    $ap = graph('POST', '/solutions/bookingBusinesses/' . rawurlencode($biz) . '/appointments', $body);
     $join = (string)($ap['joinWebUrl'] ?? '');
     return ['appointmentId' => $ap['id'] ?? '', 'joinUrl' => $join];
 }
