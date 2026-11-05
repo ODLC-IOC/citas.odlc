@@ -169,12 +169,12 @@ function clock_emoji(string $hhmm): string {
     return ($mi >= 15 && $mi < 45 ? $half : $full)[($mi >= 45 ? $h + 1 : $h) % 12];
 }
 function whatsapp_text(array $m, ?string $name = null): string {
-    $h = hora_corta($m['startUtc']); $name = $name ?? ($m['guestName'] ?? '');
+    $h = hora_corta($m['startUtc']); $varios = $name === null && count(guests_of($m)) > 1; $name = $name ?? ($m['guestName'] ?? '');
     return implode("\n", [
         $name !== '' ? "Hola, $name:" : 'Hola:', '',
-        'Te envío la invitación para nuestra reunión con OdlC.', '',
+        $varios ? 'Os envío la invitación para nuestra reunión con OdlC.' : 'Te envío la invitación para nuestra reunión con OdlC.', '',
         '📅 ' . fecha_larga($m['startUtc']), clock_emoji($h) . " $h h (Madrid)", '💻 Microsoft Teams', '',
-        'Puedes consultar la invitación, unirte a la reunión y añadirla a tu calendario aquí:', '',
+        $varios ? 'Podéis consultar la invitación, uniros a la reunión y añadirla a vuestro calendario aquí:' : 'Puedes consultar la invitación, unirte a la reunión y añadirla a tu calendario aquí:', '',
         invite_url($m), '', 'Un saludo,', '', ODLC_NOMBRE, ODLC_EMPRESA,
     ]);
 }

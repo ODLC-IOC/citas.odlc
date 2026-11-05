@@ -47,7 +47,7 @@ const ok = (c, m) => { console.log((c ? '✔ ' : '✘ ') + m); if (!c) process.e
   await p.fill('#subject', 'Revisión del pacto'); await p.fill('#date', '2026-11-20'); await p.fill('#time', '11:00');
   await p.setInputFiles('#files', S + '/orden.pdf'); await p.fill('.p-linkrow input[type=url]', 'https://odlcsl-my.sharepoint.com/:w:/g/x'); await p.fill('.p-linkrow input:not([type])', 'Borrador del pacto');
   await p.click('form button.p-btn:not(.ghost)'); await p.waitForSelector('text=Invitación creada.'); await p.waitForTimeout(500);
-  const wa = await p.inputValue('#wa'); ok(wa.includes('Hola, María y Juan:') && wa.includes('🕚 11:00 h (Madrid)') && wa.includes('/r/'), 'Mensaje de WhatsApp generado');
+  const wa = await p.inputValue('#wa'); ok(wa.includes('Hola, María y Juan:') && wa.includes('Os envío') && wa.includes('🕚 11:00 h (Madrid)') && wa.includes('/r/'), 'Mensaje de WhatsApp generado');
   const url = await p.getAttribute('.p-result a[href*="/r/"]', 'href');
   { const mm = (await (await p.request.get(B + '/api/reuniones')).json()).meetings.find((x) => x.subject === 'Revisión del pacto');
     const ev = await (await p.request.get(M + '/v1.0/me/events/' + encodeURIComponent(mm.graphEventId))).json();
@@ -55,7 +55,8 @@ const ok = (c, m) => { console.log((c ? '✔ ' : '✘ ') + m); if (!c) process.e
   await p.screenshot({ path: S + '/shots/react-panel.png', fullPage: true });
   // Invitación pública en móvil
   const m = await b.newContext({ ...devices['iPhone 13'], acceptDownloads: true }); const q = await m.newPage(); q.on('pageerror', (e) => errs.push(e.message));
-  const raw = await (await q.request.get(url)).text(); ok(raw.includes('og:image') && raw.includes('Invitación a reunión · OdlC') && !raw.includes('María'), 'Open Graph en el HTML sin datos privados');
+  const raw = await (await q.request.get(url)).text(); ok(raw.includes('og:image') && raw.includes('Invitación a reunión · OdlC') && !raw.includes('María') && raw.includes('/imagen.jpg?v='), 'Open Graph en el HTML sin datos privados');
+  { const r = await q.request.get(url + '/imagen.jpg'); const buf = await r.body(); ok(r.headers()['content-type'] === 'image/jpeg' && buf.length > 20000 && buf.length < 300000, 'Imagen propia de la reunión para WhatsApp (' + Math.round(buf.length / 1024) + ' KB)'); require('fs').writeFileSync(S + '/shots/og.jpg', buf); }
   await q.goto(url); await q.waitForSelector('.r-grid');
   const t = await q.textContent('main'); ok(['Revisión del pacto', 'Isabel Olivares de la Cerda · Ana Pérez', 'para María y Juan', '20 nov 2026', '11:00 h', 'UTC+1', 'Borrador del pacto', 'orden.pdf', 'Unirse a la reunión'].every((s) => t.includes(s)), 'Invitación con datos, asistentes y materiales');
   ok(await q.getAttribute('a.t-btn', 'href') === 'https://teams.microsoft.com/l/meetup-join/' + (await (await q.request.get(B + '/api/reuniones')).status() === 401 ? '' : '') || true, 'Botón de Teams');

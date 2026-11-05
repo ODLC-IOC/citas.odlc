@@ -4,6 +4,7 @@
 declare(strict_types=1);
 require __DIR__ . '/_lib/core.php';
 require __DIR__ . '/_lib/meeting.php';
+require __DIR__ . '/_lib/og_image.php';
 
 if (!in_array($_SERVER['REQUEST_METHOD'], ['GET', 'HEAD'], true)) { http_response_code(405); header('Allow: GET, HEAD'); exit; }
 $id = (string)($_GET['id'] ?? ''); $x = (string)($_GET['x'] ?? '');
@@ -14,6 +15,14 @@ if ($m && $x === 'calendario.ics') {
     header('Content-Type: text/calendar; charset=utf-8');
     header('Content-Disposition: inline; filename="reunion-odlc.ics"');
     echo build_ics($m); exit;
+}
+if ($m && $x === 'imagen.jpg') {
+    $img = og_image_jpg($m);
+    base_headers();
+    header('Content-Type: image/jpeg');
+    header('Content-Length: ' . strlen($img));
+    header('Cache-Control: public, max-age=300');
+    echo $img; exit;
 }
 if ($m && preg_match('#^material/([A-Za-z0-9_-]{16})$#', $x, $f)) {
     $item = null; foreach ($m['materials'] ?? [] as $it) if ($it['id'] === $f[1] && $it['kind'] === 'file') $item = $it;
@@ -31,15 +40,17 @@ if ($m && preg_match('#^material/([A-Za-z0-9_-]{16})$#', $x, $f)) {
 
 $html = (string)file_get_contents(dirname(__DIR__) . '/index.html');
 $site = site_url();
+// Imagen propia de cada reunión (fecha, hora, zona, duración); ?v= cambia al editarla para que WhatsApp no use la antigua
+$img = $m ? invite_url($m) . '/imagen.jpg?v=' . (int)($m['sequence'] ?? 0) . (estado($m) === 'cancelada' ? 'c' : '') : $site . '/og-invitacion.png';
 $og = '<title>Invitación a reunión · OdlC</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <meta name="description" content="Consulte la invitación, únase por Microsoft Teams y añádala a su calendario.">
 <meta property="og:type" content="website"><meta property="og:locale" content="es_ES"><meta property="og:site_name" content="OdlC">
 <meta property="og:title" content="Invitación a reunión · OdlC">
-<meta property="og:description" content="Consulte la invitación, únase por Microsoft Teams y añádala a su calendario.">
+<meta property="og:description" content="' . esc($m ? dia_semana($m['startUtc']) . ', ' . fecha_corta($m['startUtc']) . ' · ' . hora_corta($m['startUtc']) . ' h (Madrid) · Microsoft Teams' : 'Consulte la invitación, únase por Microsoft Teams y añádala a su calendario.') . '">
 <meta property="og:url" content="' . esc($site . '/r/' . $id) . '">
-<meta property="og:image" content="https://odlc.es/assets/img/og/invitacion-odlc.png"><meta property="og:image:type" content="image/png">
+<meta property="og:image" content="' . esc($img) . '"><meta property="og:image:secure_url" content="' . esc($img) . '"><meta property="og:image:type" content="' . ($m ? 'image/jpeg' : 'image/png') . '">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="OdlC · Invitación a reunión">
 <meta name="twitter:card" content="summary_large_image">';
 $html = preg_replace('#<title>.*?</title>#s', $og, $html, 1);

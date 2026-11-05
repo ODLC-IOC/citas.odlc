@@ -12,11 +12,13 @@ DirectoryIndex index.html
 RewriteEngine On
 RewriteCond %{HTTPS} off
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# Los scripts de la API no se reescriben otra vez (Apache repasa las reglas tras cada reescritura)
+RewriteRule ^api/(index|r)\.php$ - [L]
 # API
 RewriteRule ^api/(.*)$ api/index.php?r=$1 [QSA,L]
 # Invitaciones, su .ics y sus materiales
 RewriteRule ^r/([A-Za-z0-9_-]{22})/?$ api/r.php?id=$1 [QSA,L]
-RewriteRule ^r/([A-Za-z0-9_-]{22})/(calendario\.ics|material/[A-Za-z0-9_-]{16})$ api/r.php?id=$1&x=$2 [QSA,L]
+RewriteRule ^r/([A-Za-z0-9_-]{22})/(calendario\.ics|imagen\.jpg|material/[A-Za-z0-9_-]{16})$ api/r.php?id=$1&x=$2 [QSA,L]
 # Rutas de la app (React)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

@@ -74,7 +74,7 @@ function Dashboard({ user, onLogout }) {
     formRef.current.scrollIntoView({ behavior: 'smooth' });
   }
   function show(m, updated, text) {
-    setResult(m); setWaText(text || (updated ? m.whatsappText.replace('Te envío la invitación', 'Te envío la invitación actualizada') : m.whatsappText)); setResMsg(['', '']);
+    setResult(m); setWaText(text || (updated ? m.whatsappText.replace(/(Te|Os) envío la invitación/, '$1 envío la invitación actualizada') : m.whatsappText)); setResMsg(['', '']);
     setTimeout(() => resRef.current && resRef.current.scrollIntoView({ behavior: 'smooth' }), 50);
   }
 
