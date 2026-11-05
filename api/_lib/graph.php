@@ -137,7 +137,7 @@ function graph(string $method, string $path, ?array $body = null, ?string $token
     [$code, $d] = http_req($method, graph_base() . $path, [
         'Authorization: Bearer ' . ($token ?? access_token()), 'Content-Type: application/json', 'Prefer: outlook.timezone="' . $tzPref . '"',
     ], $body === null ? null : json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-    if ($code >= 400) { $e = new GraphError($d['error']['message'] ?? "Microsoft Graph respondió $code"); throw $e; }
+    if ($code >= 400) { $e = new GraphError(trim((string)($d['error']['message'] ?? '')) ?: "Microsoft Graph respondió $code" . (!empty($d['error']['code']) ? ' (' . $d['error']['code'] . ')' : '')); throw $e; }
     return $d;
 }
 function graph_code(string $method, string $path, ?array $body = null): int {
