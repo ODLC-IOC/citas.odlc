@@ -201,7 +201,7 @@ function build_ics(array $m): string {
     $cancel = ($m['status'] ?? '') === 'cancelada';
     $loc = fn(int $ms) => dt($ms)->format('Ymd\THis');
     $utc = fn(int $ms) => gmdate('Ymd\THis\Z', intdiv($ms, 1000));
-    $l = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//OdlC//Reuniones OdlC//ES', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+    $l = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//OdlC//Reuniones OdlC//ES', 'CALSCALE:GREGORIAN', 'METHOD:' . ($cancel ? 'CANCEL' : 'REQUEST'),
         'BEGIN:VTIMEZONE', 'TZID:Europe/Madrid', 'X-LIC-LOCATION:Europe/Madrid',
         'BEGIN:DAYLIGHT', 'TZOFFSETFROM:+0100', 'TZOFFSETTO:+0200', 'TZNAME:CEST', 'DTSTART:19700329T020000', 'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU', 'END:DAYLIGHT',
         'BEGIN:STANDARD', 'TZOFFSETFROM:+0200', 'TZOFFSETTO:+0100', 'TZNAME:CET', 'DTSTART:19701025T030000', 'RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU', 'END:STANDARD',
@@ -211,8 +211,11 @@ function build_ics(array $m): string {
         'DTSTART;TZID=Europe/Madrid:' . $loc($m['startUtc']), 'DTEND;TZID=Europe/Madrid:' . $loc($m['endUtc']),
         'SUMMARY:' . ics_esc(($cancel ? 'Cancelada: ' : '') . $m['subject']),
         'DESCRIPTION:' . ics_esc(calendar_body($m)), 'X-ALT-DESC;FMTTYPE=text/html:' . ics_esc('<html><body>' . event_html($m) . '</body></html>'), 'LOCATION:Microsoft Teams',
+        // Convocatoria de Isabel (organizadora) con los invitados: así el calendario permite aceptar o proponer otra hora y recibe los cambios
         'ORGANIZER;CN=' . ics_esc(ODLC_NOMBRE) . ':mailto:' . ODLC_EMAIL,
         'STATUS:' . ($cancel ? 'CANCELLED' : 'CONFIRMED'), 'TRANSP:OPAQUE'];
+    foreach (guests_of($m) as $g) if ($g['email'] !== '')
+        $l[] = 'ATTENDEE;CN="' . str_replace(['"', "\r", "\n"], '', $g['name'] !== '' && !str_contains($g['name'], '@') ? $g['name'] : $g['email']) . '";ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:' . $g['email'];
     if (!empty($m['teamsUrl'])) { $l[] = 'URL:' . $m['teamsUrl']; $l[] = 'X-MICROSOFT-SKYPETEAMSMEETINGURL:' . $m['teamsUrl']; }
     if (!$cancel) array_push($l, 'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' . ics_esc($m['subject']), 'TRIGGER:-PT15M', 'END:VALARM');
     array_push($l, 'END:VEVENT', 'END:VCALENDAR');

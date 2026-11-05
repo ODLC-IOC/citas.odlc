@@ -42,10 +42,10 @@ export default function Invitation({ id }) {
           <div className="r-sheet" role="dialog" aria-modal="true" aria-label="Elegir calendario" onClick={(e) => e.stopPropagation()}>
             <p className="r-sheet-t">¿En qué calendario?</p>
             <div className="r-opts">
-              <a href={c.outlookWork} target="_blank" rel="noopener noreferrer"><b>Outlook</b><span>Microsoft 365</span></a>
+              <a href={c.ics} download="reunion-odlc.ics"><b>Outlook</b><span>Escritorio y móvil</span></a>
               <a href={c.google} target="_blank" rel="noopener noreferrer"><b>Google</b><span>Calendar</span></a>
               <a href={c.ics}><b>Apple</b><span>iPhone · Mac</span></a>
-              <a href={c.outlookPersonal} target="_blank" rel="noopener noreferrer"><b>Outlook.com</b><span>Hotmail</span></a>
+              <a href={c.outlookWork} target="_blank" rel="noopener noreferrer"><b>Outlook web</b><span>Microsoft 365</span></a>
             </div>
             <a className="r-other" href={c.ics} download="reunion-odlc.ics">Otro calendario · descargar .ics</a>
             <button type="button" className="r-close" onClick={() => setOpen(false)}>Cerrar</button>

@@ -66,7 +66,7 @@ const ok = (c, m) => { console.log((c ? '✔ ' : '✘ ') + m); if (!c) process.e
   ok(await q.getAttribute('a.t-btn', 'href') === 'https://teams.microsoft.com/l/meetup-join/' + (await (await q.request.get(B + '/api/reuniones')).status() === 401 ? '' : '') || true, 'Botón de Teams');
   await q.screenshot({ path: S + '/shots/react-inv.png', fullPage: true });
   await q.click('text=Añadir al calendario'); await q.waitForSelector('text=¿En qué calendario?'); await q.screenshot({ path: S + '/shots/react-inv-cal.png' });
-  const ics = await (await q.request.get(url + '/calendario.ics')).text(); ok(ics.includes('DTSTART;TZID=Europe/Madrid:20261120T110000') && ics.includes('Ana Pérez'), '.ics correcto');
+  const ics = (await (await q.request.get(url + '/calendario.ics')).text()).replace(/\r\n /g, ''); ok(ics.includes('DTSTART;TZID=Europe/Madrid:20261120T110000') && ics.includes('Ana Pérez') && ics.includes('METHOD:REQUEST') && ics.includes('ATTENDEE;CN="María"') && ics.includes('mailto:juan@cliente.es') && ics.includes('ORGANIZER'), '.ics correcto: convocatoria de Isabel con los invitados');
   const [dl] = await Promise.all([q.waitForEvent('download'), (async () => { await q.click('.r-close'); await q.click('.r-mat a[download]'); })()]); ok(dl.suggestedFilename() === 'orden.pdf', 'Descarga de material');
   ok((await q.request.get(B + '/api/reuniones')).status() === 401, 'La invitación no da acceso al panel');
   // Página de reservas (cliente)
