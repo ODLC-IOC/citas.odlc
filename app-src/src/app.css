@@ -1,0 +1,40 @@
+/* Ajustes propios de la app de citas (los estilos base vienen de styles.css y tarjeta.css de odlc.es) */
+#root{min-height:100vh}
+.t-wide{max-width:560px}
+.r-back{position:fixed;inset:0;background:rgba(23,48,42,.45);z-index:40;display:flex;align-items:flex-end;justify-content:center}
+.r-back .r-sheet{position:relative;left:auto;right:auto;bottom:auto;width:100%}
+.r-close{display:block;margin:10px auto 0;border:0;background:none;color:var(--muted);font:500 13px var(--sans);cursor:pointer}
+.r-ok{background:var(--brass-soft);color:#5d4a20;border-radius:10px;padding:10px 12px;font-size:13.5px;margin:0 0 16px}
+/* Reservas */
+.b-steps{display:flex;justify-content:center;gap:6px;margin:0 0 18px}
+.b-steps span{width:28px;height:4px;border-radius:2px;background:var(--line)}
+.b-steps span.on{background:var(--brass)}
+.b-types{display:grid;gap:8px;text-align:left}
+.b-types button{display:block;width:100%;text-align:left;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:14px;cursor:pointer;font:inherit;color:var(--green)}
+.b-types button:hover,.b-types button[aria-pressed=true]{border-color:var(--brass);background:var(--brass-soft)}
+.b-types b{display:block;font-size:15.5px;font-weight:600}
+.b-types small{display:block;color:var(--muted);font-size:13px;margin-top:3px;line-height:1.45}
+.b-types em{font-style:normal;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--brass);font-weight:600}
+.b-days{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 8px;scroll-snap-type:x mandatory;text-align:center}
+.b-days button{flex:0 0 64px;scroll-snap-align:start;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:9px 4px;cursor:pointer;font:inherit;color:var(--green)}
+.b-days button[aria-pressed=true]{background:var(--green);border-color:var(--green);color:#fff}
+.b-days small{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.6px;opacity:.75}
+.b-days b{display:block;font-size:20px;font-weight:500;line-height:1.2}
+.b-hours{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:12px}
+.b-hours button{border:1.5px solid var(--line);background:#fff;border-radius:9px;padding:10px 0;cursor:pointer;font:500 14px var(--sans);color:var(--green)}
+.b-hours button[aria-pressed=true]{background:var(--brass);border-color:var(--brass);color:#fff}
+.b-sum{background:var(--stone-2);border-radius:12px;padding:12px 14px;text-align:left;font-size:14px;color:var(--green);margin-bottom:14px;border-left:3px solid var(--brass)}
+.b-sum b{display:block}
+.b-form{display:grid;gap:10px;text-align:left}
+.b-form label{font-size:12px;font-weight:600;color:var(--green);display:block;margin-bottom:4px}
+.b-form input,.b-form textarea{width:100%;font:15px var(--sans);border:1px solid var(--line);border-radius:9px;padding:11px 12px;color:var(--ink);background:#fff}
+.b-form textarea{min-height:70px;resize:vertical}
+.b-form .chk{display:flex;gap:8px;align-items:flex-start;font-size:13px;font-weight:400;color:var(--muted)}
+.b-form .chk input{width:auto;margin-top:3px}
+.b-err{color:#9B3127;font-size:12.5px;margin-top:3px}
+.b-back{border:0;background:none;color:var(--muted);font:500 13px var(--sans);cursor:pointer;margin-top:12px}
+.b-trap{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.b-h{font-family:var(--serif);font-weight:400;color:var(--green);font-size:21px;margin:0 0 4px}
+.b-p{color:var(--muted);font-size:13.5px;margin:0 0 16px}
+.p-btn.ms{background:#fff;color:#1b1b1b;border:1px solid #8c8c8c;border-radius:4px;gap:12px;padding:12px 18px;font-weight:600;margin-top:8px}
+.p-btn.ms:hover{background:#f3f3f3}

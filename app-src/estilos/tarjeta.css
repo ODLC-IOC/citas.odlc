@@ -1,0 +1,133 @@
+/* ODLC · Tarjeta digital, tarjeta QR, invitaciones y panel de reuniones.
+   Se carga después de styles.css: reutiliza sus tipografías (Lora, Poppins) y sus colores (:root). */
+.t-page{min-height:100vh;min-height:100svh;margin:0;display:flex;align-items:center;justify-content:center;padding:24px 16px;background:var(--stone);color:var(--ink)}
+.t-card{width:100%;max-width:440px;background:var(--white);border-radius:18px;overflow:hidden;box-shadow:0 18px 50px rgba(23,48,42,.14)}
+.t-head{background:var(--green);padding:28px 28px 24px;text-align:center;position:relative}
+.t-head::after{content:"";position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:56px;height:3px;background:var(--brass)}
+.t-head img{display:block;margin:0 auto;width:62%;max-width:230px;height:auto}
+.t-head .t-kicker{margin:18px 0 0;color:var(--brass-2);font-size:11px;letter-spacing:2.4px;text-transform:uppercase;font-weight:500}
+.t-body{padding:30px 26px 28px;text-align:center}
+.t-name{font-family:var(--serif);font-weight:400;color:var(--green);white-space:nowrap;line-height:1.2;letter-spacing:-.2px;margin:0;font-size:clamp(17px,6.2vw,28px)}
+.t-place{margin:10px 0 0;color:var(--brass);font-size:12px;letter-spacing:2.2px;font-weight:500}
+.t-rule{width:44px;height:1.5px;background:var(--brass);margin:22px auto}
+.t-list{list-style:none;margin:0;padding:0;display:grid;gap:8px;text-align:left}
+.t-list a{display:flex;align-items:center;gap:14px;padding:13px 14px;border-radius:10px;background:var(--stone-2);color:var(--green);text-decoration:none;font-size:14.5px;overflow-wrap:anywhere;transition:background .15s}
+.t-list a:hover{background:var(--brass-soft)}
+.t-ico{flex:0 0 20px;width:20px;height:20px;color:var(--brass)}
+.t-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin-top:22px;padding:16px 18px;border-radius:10px;border:0;border-bottom:3px solid var(--brass);background:var(--green);color:#fff;font:600 14px/1.2 var(--sans);letter-spacing:1.4px;text-transform:uppercase;text-decoration:none;cursor:pointer}
+.t-btn:hover{background:var(--green-3)}
+.t-btn.t-light{background:var(--white);color:var(--green);border:1.5px solid var(--brass);margin-top:10px}
+.t-btn.t-light:hover{background:var(--brass-soft)}
+.t-btn svg{width:18px;height:18px;flex:0 0 18px}
+.t-foot{margin:22px 0 0;font-size:12px;color:var(--muted)}
+.t-foot a{color:var(--green)}
+/* Tarjeta QR */
+.q-card{background:var(--white);border-top:8px solid var(--green)}
+.q-card .t-logo{display:block;width:64%;max-width:250px;margin:6px auto 26px}
+.q-qr{display:block;width:100%;max-width:300px;margin:0 auto;aspect-ratio:1/1}
+.q-hint{margin:18px 0 0;font-size:13px;color:var(--green);letter-spacing:.4px}
+.q-actions{margin-top:6px}
+@media (max-width:380px){.t-body{padding:26px 18px 24px}.t-head{padding:28px 22px 26px}}
+@media print{.t-page{background:#fff}.t-card{box-shadow:none}.no-print{display:none!important}}
+
+/* Invitación a reunión: resumen esquemático */
+.r-eyebrow{margin:0 0 8px;font-size:12.5px;letter-spacing:.3px;color:var(--brass);font-weight:600}
+.r-title{font-family:var(--serif);font-weight:400;color:var(--green);font-size:23px;line-height:1.25;margin:0}
+.r-guest{margin:6px 0 0;font-size:13.5px;color:var(--muted)}
+.r-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:20px 0 0;padding:0;text-align:left}
+.r-grid div{background:var(--stone-2);border-radius:10px;padding:12px 13px;border-left:3px solid var(--brass)}
+.r-grid dt{font-size:10.5px;letter-spacing:1.3px;text-transform:uppercase;color:var(--brass);font-weight:600}
+.r-grid dd{margin:3px 0 0;font-size:17px;font-weight:500;color:var(--green);line-height:1.25}
+.r-grid dd.r-s{margin-top:2px;font-size:12px;font-weight:400;color:var(--muted)}
+.r-desc{margin:14px 0 0;font-size:13.5px;color:var(--muted);text-align:left;line-height:1.5}
+.t-body .t-btn:first-of-type{margin-top:18px}
+.r-cal{margin-top:10px}
+.r-cal summary{list-style:none}
+.r-cal summary::-webkit-details-marker{display:none}
+/* Al pulsar, se abre una hoja inferior que pregunta qué calendario usar */
+.r-cal[open] summary::before{content:"";position:fixed;inset:0;background:rgba(23,48,42,.45);z-index:40;cursor:default}
+.r-sheet{position:fixed;left:0;right:0;bottom:0;z-index:41;background:var(--white);border-radius:18px 18px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom));box-shadow:0 -10px 40px rgba(23,48,42,.2);max-width:480px;margin:0 auto;animation:r-up .18s ease-out}
+@keyframes r-up{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+.r-sheet-t{margin:0 0 14px;font-family:var(--serif);font-size:19px;color:var(--green);text-align:center}
+.r-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.r-opts a{display:block;padding:14px 12px;border:1.5px solid var(--line);border-radius:10px;text-decoration:none;text-align:center;color:var(--green)}
+.r-opts a:hover{border-color:var(--brass);background:var(--brass-soft)}
+.r-opts b{display:block;font-size:15px;font-weight:600}
+.r-opts span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.r-other{display:block;margin-top:12px;text-align:center;font-size:13px;color:var(--green)}
+.r-status{display:inline-block;margin:0 0 12px;padding:5px 12px;border-radius:99px;font-size:11.5px;letter-spacing:1px;text-transform:uppercase;font-weight:600}
+.r-status.cancelada{background:#F6E4E1;color:#8E2F25}
+.r-status.pasada{background:var(--stone-2);color:var(--muted)}
+.t-head .t-kicker{margin-top:14px}
+
+.r-mat{margin-top:16px;text-align:left}
+.r-mat h2{margin:0 0 8px;font-size:10.5px;letter-spacing:1.3px;text-transform:uppercase;color:var(--brass);font-weight:600;font-family:var(--sans)}
+.r-mat ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.r-mat a{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;text-decoration:none;color:var(--green);font-size:14px}
+.r-mat a:hover{border-color:var(--brass);background:var(--brass-soft)}
+.r-mt{flex:0 0 auto;font-size:10.5px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:#fff;background:var(--green);border-radius:5px;padding:3px 7px}
+.r-mn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.r-ms{flex:0 0 auto;font-size:12px;color:var(--muted)}
+
+/* Panel privado */
+.p-page{margin:0;background:var(--stone-2);color:var(--ink);min-height:100vh}
+.p-top{background:var(--green);border-bottom:3px solid var(--brass)}
+.p-top .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:72px;max-width:980px}
+.p-top img{width:96px;height:auto}
+.p-top span{color:var(--brass-2);font-size:11px;letter-spacing:2.2px;text-transform:uppercase}
+.p-top button{background:transparent;border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:6px;padding:8px 14px;font:500 13px var(--sans);cursor:pointer}
+.p-main{max-width:980px;margin:0 auto;padding:28px 20px 60px}
+.p-box{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:26px;margin-bottom:22px}
+.p-box h1,.p-box h2{font-family:var(--serif);font-weight:400;color:var(--green);margin:0 0 6px}
+.p-box h1{font-size:26px}.p-box h2{font-size:21px}
+.p-muted{color:var(--muted);font-size:13.5px;margin:0 0 18px;line-height:1.55}
+.p-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px}
+.p-grid .full{grid-column:1/-1}
+.p-field label{display:block;font-size:12px;font-weight:600;letter-spacing:.4px;color:var(--green);margin-bottom:6px}
+.p-field input,.p-field select,.p-field textarea{width:100%;font:15px var(--sans);color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:8px;padding:11px 12px}
+.p-field textarea{min-height:84px;resize:vertical}
+.p-field small{display:block;color:var(--muted);font-size:12px;margin-top:5px}
+.p-field input[aria-invalid="true"]{border-color:#B2443A}
+.p-mode{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.p-mode label{display:flex;gap:10px;align-items:flex-start;border:1.5px solid var(--line);border-radius:10px;padding:13px;cursor:pointer;font-size:13.5px;line-height:1.4}
+.p-mode label:has(input:checked){border-color:var(--brass);background:var(--brass-soft)}
+.p-mode input{width:auto;flex:0 0 auto;margin:3px 0 0;accent-color:var(--green)}
+.p-mode span{flex:1;text-align:left;font-weight:400;color:var(--muted)}
+.p-mode b{display:block;color:var(--green);font-size:14px}
+.p-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+.p-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;border-radius:7px;border:1.5px solid var(--green);background:var(--green);color:#fff;font:600 13.5px var(--sans);text-decoration:none;cursor:pointer}
+.p-btn:hover{background:var(--green-3)}
+.p-btn.ghost{background:#fff;color:var(--green)}
+.p-btn.ghost:hover{background:var(--stone-2)}
+.p-btn.brass{background:var(--brass);border-color:var(--brass)}
+.p-btn.wa{background:#1E6B4F;border-color:#1E6B4F}
+.p-btn.danger{background:#fff;color:#8E2F25;border-color:#D7B3AD}
+.p-btn[disabled]{opacity:.55;cursor:not-allowed}
+.p-msg{margin:14px 0 0;font-size:13.5px}
+.p-msg.err{color:#9B3127}.p-msg.ok{color:var(--green-3)}
+.p-result{border:1.5px solid var(--brass);background:var(--paper)}
+.p-result pre{white-space:pre-wrap;font:13.5px/1.55 var(--sans);background:var(--white);border:1px solid var(--line);border-radius:8px;padding:14px;margin:12px 0 0}
+.p-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
+.p-tabs button{border:1px solid var(--line);background:#fff;color:var(--green);border-radius:99px;padding:7px 14px;font:500 13px var(--sans);cursor:pointer}
+.p-tabs button[aria-pressed="true"]{background:var(--green);color:#fff;border-color:var(--green)}
+.p-item{border-top:1px solid var(--line);padding:16px 0}
+.p-item:first-child{border-top:0}
+.p-item h3{margin:0;font:500 16px var(--sans);color:var(--green)}
+.p-item p{margin:4px 0 0;font-size:13.5px;color:var(--muted)}
+.p-item .p-actions{margin-top:10px}
+.p-item .p-btn{padding:8px 12px;font-size:12.5px}
+.p-badge{display:inline-block;font-size:11px;letter-spacing:.8px;text-transform:uppercase;font-weight:600;border-radius:99px;padding:3px 9px;margin-left:8px;vertical-align:2px}
+.p-badge.proxima{background:var(--brass-soft);color:#7A5E28}
+.p-badge.pasada{background:var(--stone-2);color:var(--muted)}
+.p-badge.cancelada{background:#F6E4E1;color:#8E2F25}
+.p-ms{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.p-login{max-width:420px;margin:8vh auto 0}
+.p-import{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin-top:16px;padding:14px;border:1.5px dashed var(--brass);border-radius:10px;background:var(--paper)}
+.p-import small{flex:1 1 260px;color:var(--muted);font-size:12px;line-height:1.45}
+.p-linkrow{display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-top:10px}
+.p-mats{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}
+.p-mats li{display:flex;align-items:center;gap:10px;justify-content:space-between;background:var(--stone-2);border-radius:8px;padding:8px 10px;font-size:13.5px}
+.p-mats li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p-mats button{flex:0 0 auto;border:0;background:none;color:#8E2F25;font:600 12.5px var(--sans);cursor:pointer}
+[hidden]{display:none!important}
+@media (max-width:640px){.p-grid,.p-mode,.p-linkrow{grid-template-columns:1fr}.p-box{padding:20px}.p-main{padding:18px 14px 50px}}
