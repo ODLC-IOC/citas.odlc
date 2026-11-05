@@ -10,6 +10,8 @@ DirectoryIndex index.html
   </If>
 </IfModule>
 RewriteEngine On
+# Nada de documentación ni archivos internos a la vista
+RewriteRule (^|/)\.|\.(md|zip|cjs|mjs|json|lock)$ - [F,L]
 RewriteCond %{HTTPS} off
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 # Los scripts de la API no se reescriben otra vez (Apache repasa las reglas tras cada reescritura)
