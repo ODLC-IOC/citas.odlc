@@ -143,10 +143,27 @@ function calendar_body(array $m): string {
     return implode("\n", $l);
 }
 
+// Versión corta en HTML para los enlaces «Añadir a Outlook / Google» (van dentro de la URL: sin estilos largos)
+function calendar_html(array $m): string {
+    $v = public_view($m); $inv = invite_url($m);
+    $names = array_values(array_filter(array_column(guests_of($m), 'name')));
+    $teams = (string)($m['teamsUrl'] ?? '');
+    $l = [
+        '<a href="' . esc($inv) . '"><img src="' . esc($inv . '/imagen.jpg?v=' . (int)($m['sequence'] ?? 0)) . '" width="520" alt="OdlC · Invitación a reunión"></a>',
+        '<b>' . esc($v['subject']) . '</b>',
+        '<b>Fecha:</b> ' . esc($v['dia'] . ', ' . $v['fecha']) . '<br><b>Hora:</b> ' . esc($v['hora']) . '–' . esc($v['horaFin']) . ' h (Madrid, ' . esc($v['zona']) . ')<br><b>Duración:</b> ' . esc((string)$v['duration']) . ' min · Microsoft Teams',
+        '<b>OdlC:</b> ' . esc(implode(', ', $v['team'])) . ($names ? '<br><b>' . (count($names) > 1 ? 'Invitados' : 'Invitado') . ':</b> ' . esc(join_names($names)) : ''),
+    ];
+    if (($v['description'] ?? '') !== '') $l[] = nl2br(esc($v['description']));
+    if ($teams !== '') $l[] = '<b><a href="' . esc($teams) . '">▶ Unirse a la reunión de Microsoft Teams</a></b>';
+    $l[] = '<a href="' . esc($inv) . '">Invitación y materiales</a> · <a href="' . esc(card_url()) . '">Tarjeta de contacto</a><br>' . esc(ODLC_NOMBRE) . ' · ' . esc(ODLC_EMPRESA);
+    return '<p>' . implode('</p><p>', $l) . '</p>';
+}
+
 function calendar_links(array $m): array {
     $z = fn(int $ms) => gmdate('Ymd\THis\Z', intdiv($ms, 1000));
     $iso = fn(int $ms) => gmdate('Y-m-d\TH:i:s\Z', intdiv($ms, 1000));
-    $body = calendar_body($m);
+    $body = calendar_html($m);
     $outlook = fn(string $base) => $base . '?' . http_build_query(['path' => '/calendar/action/compose', 'rru' => 'addevent', 'subject' => $m['subject'], 'startdt' => $iso($m['startUtc']), 'enddt' => $iso($m['endUtc']), 'body' => $body, 'location' => 'Microsoft Teams'], '', '&', PHP_QUERY_RFC3986);
     return [
         'google' => 'https://calendar.google.com/calendar/render?' . http_build_query(['action' => 'TEMPLATE', 'text' => $m['subject'], 'dates' => $z($m['startUtc']) . '/' . $z($m['endUtc']), 'details' => $body, 'location' => $m['teamsUrl'] ?: 'Microsoft Teams', 'ctz' => ODLC_TZ], '', '&', PHP_QUERY_RFC3986),

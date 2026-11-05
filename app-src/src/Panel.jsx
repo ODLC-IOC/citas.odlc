@@ -137,6 +137,22 @@ function Dashboard({ user, onLogout }) {
     try { const d = await api('/reuniones/' + m.id + '/cancelar', { method: 'POST', body: {} }); loadList(); show(d.meeting, false, d.cancelText); }
     catch (e) { setRowMsg({ [m.id]: e.message }); }
   }
+  // WhatsApp solo enseña la vista previa pequeña: para que se vea en grande se envía la imagen como foto y el mensaje como pie
+  async function shareImage(m, text) {
+    try {
+      const blob = await (await fetch(m.url + '/imagen.jpg', { cache: 'no-store' })).blob();
+      const file = new File([blob], 'invitacion-odlc.jpg', { type: 'image/jpeg' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], text });
+        setResMsg(['Elige WhatsApp y el chat: se envía la imagen en grande con el mensaje y el enlace.', 'ok']); return;
+      }
+      // Ordenador sin «Compartir»: se copia la imagen; en WhatsApp pegas (Ctrl+V) y luego el mensaje como pie de foto
+      const bmp = await createImageBitmap(blob); const c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height; c.getContext('2d').drawImage(bmp, 0, 0);
+      const png = await new Promise((r) => c.toBlob(r, 'image/png'));
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
+      setResMsg(['Imagen copiada. En WhatsApp pega con Ctrl+V; en el pie de foto pega el mensaje (botón «Copiar mensaje»).', 'ok']);
+    } catch (e) { if (e && e.name !== 'AbortError') setResMsg(['No se ha podido compartir la imagen. Usa «Descargar imagen» y adjúntala en WhatsApp.', 'err']); }
+  }
   async function doCopy(text, key) { const ok = await copy(text); if (key) setRowMsg({ [key]: ok ? 'Copiado.' : 'No se ha podido copiar.' }); else setResMsg([ok ? 'Copiado.' : 'No se ha podido copiar.', ok ? 'ok' : 'err']); }
 
   const items = meetings.filter((m) => filter === 'todas' || m.estado === filter).sort((a, b) => (filter === 'proxima' ? a.startUtc - b.startUtc : b.startUtc - a.startUtc));
@@ -235,6 +251,8 @@ function Dashboard({ user, onLogout }) {
             <div className="p-field"><label htmlFor="wa">Mensaje de WhatsApp (puedes retocarlo)</label><textarea id="wa" rows={13} value={waText} onChange={(e) => setWaText(e.target.value)} /></div>
             <div className="p-actions">
               <a className="p-btn wa" href={waHref(result, waText)} target="_blank" rel="noopener" onClick={() => setResMsg(['WhatsApp se ha abierto con el mensaje. Se enviará cuando pulses Enviar en WhatsApp.', 'ok'])}>Enviar por WhatsApp</a>
+              <button className="p-btn ghost" type="button" onClick={() => shareImage(result, waText)}>Imagen + mensaje (grande)</button>
+              <a className="p-btn ghost" href={result.url + '/imagen.jpg'} download={'invitacion-odlc-' + result.local.date + '.jpg'}>Descargar imagen</a>
               <a className="p-btn ghost" href={result.url} target="_blank" rel="noopener">Abrir invitación</a>
               <button className="p-btn ghost" type="button" onClick={() => doCopy(result.url)}>Copiar enlace</button>
               <button className="p-btn ghost" type="button" onClick={() => doCopy(waText)}>Copiar mensaje</button>
