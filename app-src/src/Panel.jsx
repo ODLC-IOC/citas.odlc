@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, ApiError, waHref, copy } from './api.js';
-import { LOGO_CLARO } from './Card.jsx';
+import Card, { LOGO_CLARO } from './Card.jsx';
 import { parseOutlookIcs, teamsFrom } from './ics.js';
 
 const ME = 'Isabel Olivares de la Cerda';
@@ -17,12 +17,12 @@ function Login() {
   const q = new URLSearchParams(location.search);
   const err = q.get('acceso') === 'error' ? q.get('detalle') || 'No se ha podido entrar.' : '';
   return (
-    <div className="p-page"><Top label="Área privada" />
-      <main className="p-main"><section className="p-box p-login"><h1>Reuniones</h1>
-        <p className="p-muted">Acceso reservado a las personas autorizadas por OdlC, con su cuenta de Microsoft.</p>
-        <a className="p-btn ms" href="/api/entrar"><svg viewBox="0 0 21 21" width="18" height="18" aria-hidden="true"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>Iniciar sesión con Microsoft</a>
-        {err && <p className="p-msg err" role="alert">{err}</p>}
-      </section></main></div>);
+    <Card kicker="Gestor de citas">
+      <h1 className="b-h">Acceso privado</h1>
+      <p className="b-p">Solo para personas autorizadas por OdlC, con su cuenta de Microsoft.</p>
+      <a className="t-btn ms-btn" href="/api/entrar"><svg viewBox="0 0 21 21" width="18" height="18" aria-hidden="true"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>Iniciar sesión con Microsoft</a>
+      {err && <p className="b-err" role="alert" style={{ marginTop: 14 }}>{err}</p>}
+    </Card>);
 }
 
 export default function Panel() {

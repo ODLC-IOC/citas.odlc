@@ -38,3 +38,4 @@
 .b-p{color:var(--muted);font-size:13.5px;margin:0 0 16px}
 .p-btn.ms{background:#fff;color:#1b1b1b;border:1px solid #8c8c8c;border-radius:4px;gap:12px;padding:12px 18px;font-weight:600;margin-top:8px}
 .p-btn.ms:hover{background:#f3f3f3}
+.ms-btn svg{width:18px;height:18px;flex:0 0 18px}

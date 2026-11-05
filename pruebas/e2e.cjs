@@ -11,8 +11,8 @@ const ok = (c, m) => { console.log((c ? '✔ ' : '✘ ') + m); if (!c) process.e
   await p.goto(B + '/panel'); await p.waitForSelector('text=Iniciar sesión con Microsoft');
   ok(await p.locator('input[type=password]').count() === 0, 'No hay campo de contraseña');
   await p.request.get(M + '/set-user?u=intruso@odlc.es');
-  await p.click('text=Iniciar sesión con Microsoft'); await p.waitForSelector('.p-msg.err');
-  ok((await p.textContent('.p-msg.err')).includes('no está autorizada'), 'Cuenta no autorizada rechazada');
+  await p.click('text=Iniciar sesión con Microsoft'); await p.waitForSelector('.b-err');
+  ok((await p.textContent('.b-err')).includes('no está autorizada'), 'Cuenta no autorizada rechazada');
   ok((await p.request.get(B + '/api/reuniones')).status() === 401, 'Sin sesión tras el rechazo');
   await p.request.get(M + '/set-user?u=isabel@odlc.es');
   await p.click('text=Iniciar sesión con Microsoft'); await p.waitForSelector('text=Nueva reunión');
