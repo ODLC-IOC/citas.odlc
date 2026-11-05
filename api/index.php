@@ -158,7 +158,7 @@ try {
     if ($path === '/reuniones' && $method === 'POST') {
         $b = body_json();
         $mode = ($b['mode'] ?? '') === 'auto' ? 'auto' : 'manual';
-        $v = validate_input($b, $mode === 'manual');
+        $v = validate_input($b, $mode === 'manual' && empty($b['toBookings']));
         if (isset($v['errors'])) send_json(['error' => 'Revisa los campos marcados.', 'fields' => $v['errors']], 422);
         // Modo manual con Microsoft conectado: también se crea el evento en Outlook (bloquea la agenda y Bookings) con el enlace pegado
         $toOutlook = $mode === 'auto' || (!empty($b['toOutlook']) && ms_ready());
@@ -175,9 +175,11 @@ try {
             if (!$sv) send_json(['error' => 'Tu página de Bookings no tiene ningún servicio visible.'], 422);
         }
         if ($sv) {
-            $ap = bk_create($biz, $sv, $m, '', $mode === 'auto');
+            // Sin enlace pegado, Bookings crea él mismo la reunión de Teams
+            $online = $mode === 'auto' || trim((string)($m['teamsUrl'] ?? '')) === '';
+            $ap = bk_create($biz, $sv, $m, '', $online);
             $m['bookingAppointmentId'] = $ap['appointmentId']; $m['bookingsBusiness'] = $biz; $m['source'] = 'panel';
-            if ($mode === 'auto') { if ($ap['joinUrl'] === '') { bk_cancel($biz, $ap['appointmentId']); send_json(['error' => 'Bookings no ha devuelto el enlace de Teams. Pega tú el enlace (modo manual) y vuelve a intentarlo.'], 502); } $m['teamsUrl'] = $ap['joinUrl']; }
+            if ($online) { $m['mode'] = 'bookings'; if ($ap['joinUrl'] === '') { bk_cancel($biz, $ap['appointmentId']); send_json(['error' => 'Bookings no ha devuelto el enlace de Teams. Pega tú el enlace (modo manual) y vuelve a intentarlo.'], 502); } $m['teamsUrl'] = $ap['joinUrl']; }
         }
         elseif ($mode === 'auto') { $ev = create_teams_event($m, $invite); $m['teamsUrl'] = $ev['joinUrl']; $m['graphEventId'] = $ev['eventId']; }
         elseif ($toOutlook) { $m['graphEventId'] = create_outlook_event($m, $invite); }

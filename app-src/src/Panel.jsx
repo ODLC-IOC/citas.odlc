@@ -5,7 +5,7 @@ import { parseOutlookIcs, teamsFrom } from './ics.js';
 
 const ME = 'Isabel Olivares de la Cerda';
 const NOGUEST = { name: '', email: '', phone: '' };
-const EMPTY = { mode: 'manual', guests: [NOGUEST], team: ME, subject: '', date: '', time: '', duration: '60', teamsUrl: '', description: '', notes: '', sendInvite: true, toOutlook: true, toBookings: false, bkService: '' };
+const EMPTY = { mode: 'manual', guests: [NOGUEST], team: ME, subject: '', date: '', time: '', duration: '60', teamsUrl: '', description: '', notes: '', sendInvite: true, toOutlook: true, toBookings: true, bkService: '' };
 const LABEL = { proxima: 'Próxima', pasada: 'Pasada', cancelada: 'Cancelada' };
 const ORIGEN = { panel: '', reserva: ' · Reserva web', bookings: ' · Bookings', outlook: ' · Outlook' };
 const fmtSize = (b) => (b < 1048576 ? Math.max(1, Math.round(b / 1024)) + ' KB' : (b / 1048576).toFixed(1).replace('.', ',') + ' MB');
@@ -101,7 +101,7 @@ function Dashboard({ user, onLogout }) {
     if (!p.date) f.date = 'Elige una fecha.';
     if (!p.time) f.time = 'Elige una hora.';
     p.guests.forEach((g, i) => { if (g.email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(g.email)) f['guests.' + i + '.email'] = 'El correo no es válido.'; });
-    if ((editing ? editing.mode : p.mode) === 'manual' && !teamsFrom(p.teamsUrl)) f.teamsUrl = 'Pega un enlace de Microsoft Teams válido.';
+    if ((editing ? editing.mode : p.mode) === 'manual' && !p.toBookings && !teamsFrom(p.teamsUrl)) f.teamsUrl = 'Pega un enlace de Microsoft Teams válido.';
     if (p.sendInvite && (p.mode === 'auto' || p.toOutlook) && !p.guests.some((g) => g.email)) f['guests.0.email'] = 'Para enviar la convocatoria, escribe al menos un correo.';
     if (Object.keys(f).length) { setFields(f); setFormMsg(['Revisa los campos marcados.', 'err']); return; }
     setBusy(true); setFormMsg([p.mode === 'auto' && !editing ? 'Creando el evento en Outlook y la reunión de Teams…' : 'Guardando…', '']);
@@ -258,9 +258,9 @@ function Dashboard({ user, onLogout }) {
               <Field id="date" label="Fecha *" err={fields.date}><input id="date" type="date" value={form.date} onChange={set('date')} /></Field>
               <Field id="time" label="Hora *" err={fields.time}><input id="time" type="time" step="300" value={form.time} onChange={set('time')} /></Field>
               <Field id="duration" label="Duración *" err={fields.duration}><select id="duration" value={form.duration} onChange={set('duration')}>{[15, 30, 45, 60, 90].map((d) => <option key={d} value={d}>{d} minutos</option>)}</select></Field>
-              {modeNow === 'manual' && <Field full id="teamsUrl" label="Enlace de Microsoft Teams *" help="Puedes pegar el texto entero de la invitación de Teams: se extrae el enlace solo." err={fields.teamsUrl}>
+              {modeNow === 'manual' && !(bkOn && form.toBookings && !editing) && <Field full id="teamsUrl" label="Enlace de Microsoft Teams *" help="Puedes pegar el texto entero de la invitación de Teams: se extrae el enlace solo." err={fields.teamsUrl}>
                 <input id="teamsUrl" type="url" value={form.teamsUrl} placeholder="https://teams.microsoft.com/l/meetup-join/…" onChange={(e) => setForm({ ...form, teamsUrl: teamsFrom(e.target.value) || e.target.value })} /></Field>}
-              {bkOn && !editing && <div className="p-field full"><label><input type="checkbox" checked={form.toBookings} onChange={set('toBookings')} style={{ width: 'auto', marginRight: 8 }} />Registrar en mi Microsoft Bookings (me bloquea la agenda y Bookings envía la confirmación por correo a cada invitado)</label>
+              {bkOn && !editing && <div className="p-field full"><label><input type="checkbox" checked={form.toBookings} onChange={set('toBookings')} style={{ width: 'auto', marginRight: 8 }} />Crear en mi Microsoft Bookings: Bookings genera el Teams, me bloquea la agenda y envía la confirmación por correo a cada invitado</label>
                 {form.toBookings && bk.servicios.length > 1 && <select aria-label="Servicio de Bookings" value={form.bkService} onChange={set('bkService')} style={{ marginTop: 8 }}>{bk.servicios.map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}</select>}</div>}
               {modeNow === 'manual' && autoOk && !(bkOn && form.toBookings && !editing) && !(editing && editing.graphEventId) && <div className="p-field full"><label><input type="checkbox" checked={form.toOutlook} onChange={set('toOutlook')} style={{ width: 'auto', marginRight: 8 }} />Crear también el evento en mi Outlook con este enlace (me bloquea la agenda y Bookings)</label></div>}
               {!(bkOn && form.toBookings && !editing) && (modeNow !== 'manual' || (autoOk && form.toOutlook) || (editing && editing.graphEventId)) && <div className="p-field full"><label><input type="checkbox" checked={form.sendInvite} onChange={set('sendInvite')} style={{ width: 'auto', marginRight: 8 }} />Enviar la convocatoria por correo (Outlook) a los invitados</label></div>}

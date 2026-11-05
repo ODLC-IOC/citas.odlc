@@ -97,6 +97,9 @@ const ok = (c, m) => { console.log((c ? '✔ ' : '✘ ') + m); if (!c) process.e
     const r = await p.request.post(B + '/api/reuniones/' + dup.id + '/ocultar', { headers: { 'Content-Type': 'application/json', Origin: B }, data: {} });
     const all1 = (await (await p.request.get(B + '/api/reuniones')).json()).meetings; const pg = await p.request.get(B + '/r/' + dup.id);
     ok(r.ok() && !all1.some((x) => x.id === dup.id) && pg.status() === 200, 'Ocultar un duplicado: sale de la lista y su enlace sigue funcionando'); }
+  { const r = await p.request.post(B + '/api/reuniones', { headers: { 'Content-Type': 'application/json', Origin: B }, data: { mode: 'manual', toBookings: true, guests: [{ name: 'Eva', email: 'eva@cliente.es' }], subject: 'Sin enlace', date: '2026-11-25', time: '10:00', duration: 30, teamsUrl: '', team: 'Isabel Olivares de la Cerda' } });
+    const a3 = await (await p.request.get(M + '/last-appt')).json(); const mm = (await r.json()).meeting;
+    ok(r.status() === 201 && a3.isLocationOnline === true && mm.teamsUrl.endsWith('BOOKINGSAPPT'), 'Sin enlace pegado: Bookings crea el Teams solo'); }
   // Cancelar desde el panel
   await p.reload(); await p.waitForSelector('text=Mis reuniones');
   const item = p.locator('.p-item', { hasText: 'Pedro Ruiz' }); await item.locator('button.danger').click(); await item.locator('button.danger').click(); await p.waitForTimeout(800);
