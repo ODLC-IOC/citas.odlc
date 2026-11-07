@@ -7,6 +7,7 @@ function booking_settings(): array {
         'tipos' => [
             ['id' => 'sesion', 'nombre' => 'Sesión inicial gratuita', 'duracion' => 30, 'descripcion' => 'Primera conversación para conocer su empresa y ver cómo puede ayudarle OdlC.'],
             ['id' => 'diagnostico', 'nombre' => 'Arranque del Diagnóstico OdlC', 'duracion' => 60, 'descripcion' => 'Reunión de inicio para quienes ya han contratado el Diagnóstico.'],
+            ['id' => 'reunion', 'nombre' => 'Reunión OdlC', 'duracion' => 60, 'descripcion' => 'Reunión de trabajo con Isabel Olivares de la Cerda.', 'oculta' => true],
         ],
         // Franjas por día de la semana (1 = lunes … 5 = viernes), hora de Madrid
         'horario' => ['1' => [['09:30', '14:00'], ['16:00', '18:30']], '2' => [['09:30', '14:00'], ['16:00', '18:30']], '3' => [['09:30', '14:00'], ['16:00', '18:30']],
@@ -17,8 +18,13 @@ function booking_settings(): array {
     return array_replace($def, $s);
 }
 
-// Si hay una página de reservas compartida de Bookings elegida, los tipos de cita son sus servicios
-function booking_types(): array {
+// Si hay una página de reservas compartida de Bookings elegida, los tipos de cita son sus servicios.
+// $todas = false: solo los públicos (la lista de /reservar). Los ocultos se abren solo con su enlace.
+function booking_types(bool $todas = false): array {
+    $t = booking_all_types();
+    return $todas ? $t : array_values(array_filter($t, fn($x) => empty($x['oculta'])));
+}
+function booking_all_types(): array {
     $biz = bk_business();
     if ($biz && ms_ready()) {
         try { return array_map(fn($sv) => $sv + ['bookings' => true], bk_services($biz)); } catch (GraphError $e) { error_log('Bookings: ' . $e->getMessage()); }
@@ -26,7 +32,15 @@ function booking_types(): array {
     return booking_settings()['tipos'];
 }
 function booking_type(string $id): ?array {
-    foreach (booking_types() as $t) if ($t['id'] === $id) return $t;
+    $all = booking_types(true);
+    foreach ($all as $t) if ($t['id'] === $id) return $t;
+    // «reunion»: el servicio oculto de Bookings cuyo nombre lleva «reunión» (o el primero oculto)
+    if ($id === 'reunion') {
+        $ocultos = array_values(array_filter($all, fn($x) => !empty($x['oculta'])));
+        foreach ($ocultos as $t) if (preg_match('/reuni/iu', $t['nombre'])) return $t;
+        if ($ocultos) return $ocultos[0];
+        foreach (booking_settings()['tipos'] as $t) if ($t['id'] === 'reunion') return $t;
+    }
     return null;
 }
 

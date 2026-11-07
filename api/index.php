@@ -26,7 +26,8 @@ try {
         if (!ms_ready()) send_json(['disponible' => false, 'tipos' => []]);
         $tipos = array_map(fn($t) => ['id' => $t['id'], 'nombre' => $t['nombre'], 'duracion' => $t['duracion'], 'descripcion' => $t['descripcion'] ?? ''], booking_types());
         $tipo = booking_type((string)($_GET['tipo'] ?? '')) ;
-        send_json(['disponible' => true, 'tipos' => $tipos, 'huecos' => $tipo ? booking_slots($tipo) : new stdClass()]);
+        $pub = $tipo ? ['id' => $tipo['id'], 'nombre' => $tipo['nombre'], 'duracion' => $tipo['duracion'], 'descripcion' => $tipo['descripcion'] ?? ''] : null;
+        send_json(['disponible' => true, 'tipos' => $tipos, 'tipo' => $pub, 'huecos' => $tipo ? booking_slots($tipo) : new stdClass()]);
     }
     // ===== El invitado gestiona su cita con el código y su correo =====
     if (str_starts_with($path, '/cita/') && $method === 'POST') {

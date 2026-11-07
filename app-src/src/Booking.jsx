@@ -12,7 +12,7 @@ const fmtDay = (d) => {
   };
 };
 
-export default function Booking() {
+export default function Booking({ fixed = '' }) {
   const [info, setInfo] = useState(null);
   const [tipo, setTipo] = useState(null);
   const [slots, setSlots] = useState(null);
@@ -25,7 +25,14 @@ export default function Booking() {
   const [busy, setBusy] = useState(false);
 
   // ?tipo=sesion o ?tipo=diagnostico (botones de odlc.es): entra directamente en ese tipo de cita
-  useEffect(() => { api('/reservas').then((d) => {
+  useEffect(() => {
+    // Enlace fijo (/reunion): entra directamente en ese tipo, sin enseñar los demás
+    if (fixed) { api('/reservas?tipo=' + fixed).then((d) => {
+      setInfo(d);
+      if (d.disponible && d.tipo) { setTipo(d.tipo); setStep(2); setSlots(d.huecos || {}); const first = Object.keys(d.huecos || {})[0]; if (first) setDay(first); }
+      else if (d.disponible) setMsg('Esta página de reservas no está disponible. Escríbanos a isabel@odlc.es.');
+    }).catch((e) => setMsg(e.message)); return; }
+    api('/reservas').then((d) => {
     setInfo(d);
     const want = new URLSearchParams(location.search).get('tipo');
     const t = want && (d.tipos || []).find((x) => x.id === want || (want === 'sesion' && /gratuit/i.test(x.nombre)) || (want === 'diagnostico' && /diagn/i.test(x.nombre)));
@@ -53,14 +60,14 @@ export default function Booking() {
       window.location.assign('/r/' + d.id + '?nueva=1');
     } catch (err) {
       setErrs(err.fields); setMsg(err.message);
-      if (err.fields && err.fields.hora) { setStep(2); chooseType(tipo); }
+      if (err.fields && err.fields.hora) { if (fixed) { setStep(2); api('/reservas?tipo=' + fixed).then((d) => setSlots(d.huecos || {})); } else { setStep(2); chooseType(tipo); } }
       setBusy(false);
     }
   }
   const set = (k) => (e) => setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
 
   return (
-    <Card kicker="Reservar una cita">
+    <Card kicker={fixed ? 'Reservar una reunión' : 'Reservar una cita'}>
       <div className="b-steps" aria-hidden="true">{[1, 2, 3].map((i) => <span key={i} className={step >= i ? 'on' : ''} />)}</div>
 
       {!info && !msg && <p className="b-p">Cargando…</p>}
@@ -83,7 +90,7 @@ export default function Booking() {
             <div className="b-hours" role="group" aria-label="Hora">{(slots[day] || []).map((h) => (
               <button key={h} type="button" aria-pressed={h === hour} onClick={() => setHour(h)}>{h}</button>))}</div>
             <button type="button" className="t-btn" disabled={!hour} onClick={() => setStep(3)} style={{ opacity: hour ? 1 : 0.5 }}>Continuar</button></>}
-          <button type="button" className="b-back" onClick={() => setStep(1)}>← Cambiar tipo de cita</button></>)}
+          {!fixed && <button type="button" className="b-back" onClick={() => setStep(1)}>← Cambiar tipo de cita</button>}</>)}
 
       {step === 3 && (
         <form className="b-form" onSubmit={submit} noValidate>

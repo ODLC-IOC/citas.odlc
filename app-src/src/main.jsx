@@ -14,6 +14,8 @@ function App() {
   if (inv) return <Invitation id={inv[1]} />;
   if (path.startsWith('/mi-cita')) return <Manage />;
   // citas.odlc.es abre el gestor de citas (privado); la página pública de reservas está en /reservar
+  // /reunion: reserva de una reunión normal (tipo oculto, solo con este enlace; para la firma de correo)
+  if (/^\/reuni(o|ó)n\/?$/.test(decodeURIComponent(path))) return <Booking fixed="reunion" />;
   if (path.startsWith('/reservar') || path.startsWith('/cita')) return <Booking />;
   return <Panel />;
 }
