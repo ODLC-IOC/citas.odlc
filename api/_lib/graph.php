@@ -297,7 +297,8 @@ function bk_services(string $biz): array {
         // Servicios ocultos en Bookings («Reunión OdlC»): no salen en la lista pública, solo se abren con su enlace (/reunion)
         $services[] = ['id' => $sv['id'], 'nombre' => $sv['displayName'], 'duracion' => iso_minutes((string)($sv['defaultDuration'] ?? 'PT30M')),
             'descripcion' => trim(strip_tags((string)($sv['description'] ?? ''))), 'staff' => $me, 'online' => (bool)($sv['isLocationOnline'] ?? true),
-            'oculta' => !empty($sv['isHiddenFromCustomers'])];
+            // «Reunión …» nunca sale en la lista de la web aunque sea pública en Bookings: solo con su enlace (/reunion)
+            'oculta' => !empty($sv['isHiddenFromCustomers']) || (bool)preg_match('/reuni/iu', (string)$sv['displayName'])];
     }
     set_json('bk-cache', ['biz' => $biz, 'at' => time(), 'services' => $services]);
     return $services;
